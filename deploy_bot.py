@@ -318,20 +318,18 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts_info = ""
     if info['estimated_size'] > MAX_TELEGRAM_SIZE:
         parts = math.ceil(info['estimated_size'] / CHUNK_SIZE)
-        parts_info = f"\n📦 **{parts} qismga bo'linadi**"
+        parts_info = f"\n📦 {parts} qismga bo'linadi"
     
-    video_info_text = f"""
-🎵 **{info['title']}**
+    video_info_text = f"""🎵 {info['title']}
 
 👤 {info['uploader']}
 ⏱ {duration} | 👀 {views}
-📊 ~{estimated_size}{parts_info}
-    """
+📊 ~{estimated_size}{parts_info}"""
     
     keyboard = [[InlineKeyboardButton("🎵 Yuklab Olish", callback_data=f"download:{url}")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await status_msg.edit_text(video_info_text, parse_mode='Markdown', reply_markup=reply_markup)
+    await status_msg.edit_text(video_info_text, reply_markup=reply_markup)
 
 async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle download button press"""
@@ -518,9 +516,9 @@ def main():
     application.add_handler(CallbackQueryHandler(part_callback, pattern="^(part:|all_parts:)"))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(youtube\.com|youtu\.be)'), handle_url))
     
-    print("🚀 Unlimited Audio Bot (@unlimited_audio_bot) started on Railway!")
-    print(f"🤖 Bot Token: {BOT_TOKEN[:10]}...")
-    print("📱 Bot tayyor - Telegram'da /start yuboring!")
+    print("Unlimited Audio Bot (@unlimited_audio_bot) started!")
+    print(f"Bot Token: {BOT_TOKEN[:10]}...")
+    print("Bot tayyor - Telegram'da /start yuboring!")
     application.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
