@@ -403,9 +403,9 @@ downloader = AudioDownloader()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start command handler"""
     welcome_text = """
-🚀 **Unlimited Audio Bot (@unlimited_audio_bot)**
+🚀 Unlimited Audio Bot (@unlimited_audio_bot)
 
-**Xususiyatlar:**
+Xususiyatlar:
 • Har qanday hajmdagi video/audio yuklab olish
 • Turli formatlar: MP3, M4A, MP4 video
 • Katta fayllar uchun aniq qism tanlash
@@ -413,33 +413,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Professional progress tracking
 • 24/7 ishlaydigan xizmat
 
-**Qanday ishlaydi:**
-1. **YouTube URL yuboring**
-2. **Format tanlang:**
+Qanday ishlaydi:
+1. YouTube URL yuboring
+2. Format tanlang:
    🎵 MP3 Audio (192kbps)
    🎶 M4A Audio (original)
    🎧 Best Audio Quality
    📹 MP4 Video (720p/480p)
 
-3. **Kichik fayllar** - Darhol yuboriladi
-4. **Katta fayllar** - Qismlar menyusi
+3. Kichik fayllar - Darhol yuboriladi
+4. Katta fayllar - Qismlar menyusi
 
-**Misol: Format tanlash**
-```
+Misol: Format tanlash
 🎵 Video Title
 👤 Channel Name
 ⏱ 45:30 | 👀 1,234,567
-📊ぺ500.0 MB
+📊 500.0 MB
 
 Format tanlang:
 🎵 MP3 Audio    🎶 M4A Audio
 📹 MP4 720p     📺 MP4 480p
 🎧 Best Quality
-```
 
-**YouTube havola yuboring!** 👇
+YouTube havola yuboring! 👇
     """
-    await update.message.reply_text(welcome_text, parse_mode='Markdown')
+    await update.message.reply_text(welcome_text)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Help command handler"""
@@ -519,13 +517,13 @@ Keyinroq qayta urinib ko'ring! 🔄"""
         parts = math.ceil(info['estimated_size'] / CHUNK_SIZE)
         parts_info = f"\n📦 {parts} qismga bo'linadi"
     
-    video_info_text = f"""🎵 **{info['title']}**
+    video_info_text = f"""🎵 {info['title']}
 
 👤 {info['uploader']}
 ⏱ {duration} | 👀 {views}
 📊 ~{estimated_size}
 
-**Format tanlang:**"""
+Format tanlang:"""
     
     # Format selection keyboard
     keyboard = [
@@ -543,7 +541,7 @@ Keyinroq qayta urinib ko'ring! 🔄"""
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await status_msg.edit_text(video_info_text, parse_mode='Markdown', reply_markup=reply_markup)
+    await status_msg.edit_text(video_info_text, reply_markup=reply_markup)
 
 async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle format selection"""
@@ -598,18 +596,17 @@ async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("📦 Barcha qismlar", callback_data=f"all_parts:{file_path}")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            parts_info = f"""🎵 **{title}**
+            parts_info = f"""🎵 {title}
 📁 Format: {format_name}
 
 📊 Jami hajmi: {format_file_size(file_size)}
 ⏱ Jami davomiyligi: {format_duration(duration)}
 📦 {len(chunks)} qismga bo'lindi
 
-**Qaysi qismni tanlaysiz?**"""
+Qaysi qismni tanlaysiz?"""
             
             await progress_msg.edit_text(
                 parts_info,
-                parse_mode='Markdown',
                 reply_markup=reply_markup
             )
             
