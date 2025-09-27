@@ -160,40 +160,67 @@ class AudioDownloader:
     def get_video_info(self, url: str) -> dict:
         """Get video information with multiple fallback methods"""
         
-        # Try different extraction methods
+        # Try different extraction methods with more aggressive bypass
         methods = [
-            # Method 1: Android client
+            # Method 1: Android client with cookies simulation
             {
                 'quiet': True,
                 'no_warnings': True,
                 'extractor_args': {
                     'youtube': {
                         'player_client': ['android'],
-                        'skip': ['dash', 'hls']
+                        'skip': ['dash', 'hls'],
+                        'player_skip': ['configs', 'webpage']
                     }
                 },
                 'http_headers': {
-                    'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip'
+                    'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip',
+                    'X-YouTube-Client-Name': '3',
+                    'X-YouTube-Client-Version': '17.31.35'
                 }
             },
-            # Method 2: Web client with different user agent
+            # Method 2: iOS client with different approach
             {
                 'quiet': True,
                 'no_warnings': True,
                 'extractor_args': {
                     'youtube': {
-                        'player_client': ['web'],
+                        'player_client': ['ios'],
+                        'skip': ['dash', 'hls'],
+                        'player_skip': ['webpage']
+                    }
+                },
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15',
+                    'X-YouTube-Client-Name': '5',
+                    'X-YouTube-Client-Version': '17.33.2'
+                }
+            },
+            # Method 3: TV client (often bypasses restrictions)
+            {
+                'quiet': True,
+                'no_warnings': True,
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['tv_embedded'],
                         'skip': ['dash', 'hls']
                     }
                 },
                 'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15'
+                    'User-Agent': 'Mozilla/5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebKit/538.1',
+                    'X-YouTube-Client-Name': '85'
                 }
             },
-            # Method 3: Basic extraction
+            # Method 4: Basic web with minimal detection
             {
                 'quiet': True,
-                'no_warnings': True
+                'no_warnings': True,
+                'extractor_args': {
+                    'youtube': {
+                        'skip': ['dash', 'hls'],
+                        'player_skip': ['configs']
+                    }
+                }
             }
         ]
         
@@ -212,12 +239,13 @@ class AudioDownloader:
                             'uploader': info.get('uploader', 'Unknown')[:30],
                             'view_count': info.get('view_count', 0),
                             'estimated_size': estimated_size,
+                            'method_used': i
                         }
             except Exception as e:
                 logger.warning(f"Method {i} failed: {str(e)[:100]}")
                 continue
         
-        return {'error': 'Video ma\'lumotlarini olishda xatolik. Boshqa video bilan urinib ko\'ring.'}
+        return {'error': 'Video ma\'lumotlarini olishda xatolik. Boshqa video bilan urinib ko\'ring yoki keyinroq qayta urinib ko\'ring.'}
     
     async def download_audio(self, url: str, progress_callback: Optional[Callable] = None) -> Tuple[Optional[str], str, int, int]:
         """Download audio from URL with multiple fallback methods"""
