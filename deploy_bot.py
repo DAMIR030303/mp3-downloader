@@ -271,6 +271,10 @@ class AudioDownloader:
                 'format': 'bestaudio/best',
                 'extension': 'auto'
             },
+            'mp4_1080': {
+                'format': 'best[height<=1080][ext=mp4]/best[height<=1080]/best[ext=mp4]/best',
+                'extension': 'mp4'
+            },
             'mp4_720': {
                 'format': 'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best',
                 'extension': 'mp4'
@@ -401,42 +405,24 @@ class AudioDownloader:
 downloader = AudioDownloader()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start command handler"""
-    welcome_text = """
-🚀 Unlimited Audio Bot (@unlimited_audio_bot)
+    """Start command handler with developer info"""
+    welcome_text = """🎵 Unlimited Audio Bot
 
-Xususiyatlar:
-• Har qanday hajmdagi video/audio yuklab olish
-• Turli formatlar: MP3, M4A, MP4 video
-• Katta fayllar uchun aniq qism tanlash
-• Har bir qism uchun aniq vaqt va hajm ko'rsatish
-• Professional progress tracking
-• 24/7 ishlaydigan xizmat
+✨ Xususiyatlar:
+🎯 Har qanday hajmdagi video yuklab olish
+🎼 MP3, M4A, MP4 formatlar (1080p, 720p, 480p)
+📊 Katta fayllar uchun qism tanlash
+⚡ 24/7 ishlaydigan xizmat
 
-Qanday ishlaydi:
-1. YouTube URL yuboring
-2. Format tanlang:
-   🎵 MP3 Audio (192kbps)
-   🎶 M4A Audio (original)
-   🎧 Best Audio Quality
-   📹 MP4 Video (720p/480p)
+🔥 Qanday ishlaydi:
+1️⃣ YouTube URL yuboring
+2️⃣ Format tanlang
+3️⃣ Yuklab oling!
 
-3. Kichik fayllar - Darhol yuboriladi
-4. Katta fayllar - Qismlar menyusi
+👨‍💻 Muallif: N.Damir - Senior Dasturchi
+⚡ Python • AI • Telegram Bots
 
-Misol: Format tanlash
-🎵 Video Title
-👤 Channel Name
-⏱ 45:30 | 👀 1,234,567
-📊 500.0 MB
-
-Format tanlang:
-🎵 MP3 Audio    🎶 M4A Audio
-📹 MP4 720p     📺 MP4 480p
-🎧 Best Quality
-
-YouTube havola yuboring! 👇
-    """
+🎯 YouTube havola yuboring! 👇"""
     await update.message.reply_text(welcome_text)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -535,10 +521,11 @@ Format tanlang:"""
             InlineKeyboardButton("🎶 M4A Audio", callback_data=f"fmt:m4a:{user_id}")
         ],
         [
-            InlineKeyboardButton("📹 MP4 Video (720p)", callback_data=f"fmt:mp4_720:{user_id}"),
-            InlineKeyboardButton("📺 MP4 Video (480p)", callback_data=f"fmt:mp4_480:{user_id}")
+            InlineKeyboardButton("🎬 MP4 Video (1080p)", callback_data=f"fmt:mp4_1080:{user_id}"),
+            InlineKeyboardButton("📹 MP4 Video (720p)", callback_data=f"fmt:mp4_720:{user_id}")
         ],
         [
+            InlineKeyboardButton("📺 MP4 Video (480p)", callback_data=f"fmt:mp4_480:{user_id}"),
             InlineKeyboardButton("🎧 Best Audio Quality", callback_data=f"fmt:best_audio:{user_id}")
         ]
     ]
@@ -578,6 +565,7 @@ async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'mp3': '🎵 MP3 Audio',
         'm4a': '🎶 M4A Audio',
         'best_audio': '🎧 Best Audio Quality',
+        'mp4_1080': '🎬 MP4 Video (1080p)',
         'mp4_720': '📹 MP4 Video (720p)',
         'mp4_480': '📺 MP4 Video (480p)'
     }
