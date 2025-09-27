@@ -260,8 +260,8 @@ class AudioDownloader:
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
-                }],
-                'extension': 'mp3'
+                }] if shutil.which('ffmpeg') else [],
+                'extension': 'mp3' if shutil.which('ffmpeg') else 'm4a'
             },
             'm4a': {
                 'format': 'bestaudio[ext=m4a]/bestaudio',
