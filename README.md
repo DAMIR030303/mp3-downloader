@@ -1,95 +1,115 @@
-# MP3 Downloader 🎵
+# 🎵 MP3 Downloader - Professional Edition
 
-YouTube videolaridan audio yuklab olish uchun to'liq paket:
-- 🖥️ **Command Line** versiya
-- 🌐 **Web App** (Flask)
-- 🤖 **Telegram Bot**
+YouTube videolaridan audio yuklab olish uchun professional dastur.
 
-## Xususiyatlari
+## ✨ Xususiyatlar
 
-- YouTube videolaridan yuqori sifatli audio yuklab olish (M4A, MP3, WebM)
-- Playlist'larni to'liq yuklab olish
-- Web interfeys orqali oson foydalanish
-- Telegram bot orqali tez yuklab olish
-- O'zbek tilida interfeys
-- FFmpeg'siz ham ishlaydi
+- **🚀 Har qanday hajmdagi video** - Cheklovsiz yuklab olish
+- **⚙️ 4 xil sifat rejimi** - Kichik/Muvozanatli/Yuqori/MP3
+- **📦 Avtomatik fayl bo'lish** - 50MB+ fayllar chunks'ga bo'linadi
+- **🔄 Progress tracking** - Real-time progress ko'rsatish
+- **🤖 Telegram bot** - Unified bot barcha xususiyatlar bilan
+- **🌐 Web interface** - Browser orqali foydalanish
+- **🖥️ CLI tools** - Command line interface
 
-## O'rnatish
-
-1. Repository'ni klonlash:
-```bash
-git clone https://github.com/DAMIR030303/mp3-downloader.git
-cd mp3-downloader
-```
-
-2. Virtual environment yaratish (tavsiya etiladi):
-```bash
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
-```
-
-3. Kerakli kutubxonalarni o'rnatish:
-```bash
-pip install -r requirements.txt
-```
-
-## Foydalanish usullari
-
-### 1. 🖥️ Command Line
-
-**FFmpeg bilan (MP3 format):**
-```bash
-python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
-```
-
-**FFmpeg'siz (M4A/WebM format):**
-```bash
-python main_no_ffmpeg.py "https://www.youtube.com/watch?v=VIDEO_ID"
-```
-
-### 2. 🌐 Web App
+## 🚀 Bitta Buyruq Bilan Ishga Tushirish
 
 ```bash
-python web_app.py
+python run.py
 ```
-Keyin brauzerda: http://localhost:5000
 
-### 3. 🤖 Telegram Bot
+Bu universal launcher avtomatik ravishda:
+- Requirements o'rnatadi
+- Menyu ko'rsatadi
+- Komponent tanlash imkonini beradi
 
-1. @BotFather'dan bot yarating va token oling
-2. `telegram_bot.py` faylida `BOT_TOKEN` o'rnating
-3. Botni ishga tushiring:
+## 📱 Telegram Bot
+
+### Sozlash:
+1. @BotFather'dan bot yarating
+2. `config.py`da token o'rnating
+3. `python run.py` ishga tushiring
+4. Menyu → "1" (Telegram Bot)
+
+### Xususiyatlar:
+- `/mode` - Sifat rejimini tanlash
+- Inline keyboard'lar
+- Progress tracking
+- Smart file handling
+
+## 🌐 Web Interface
+
 ```bash
-python telegram_bot.py
+python run.py
+# Menyu → 2 (Web Interface)
+# Browser: http://localhost:5000
 ```
 
-## Misollar
+## 📁 Loyiha Strukturasi
 
-```bash
-# Bitta qo'shiqni yuklab olish
-python main.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-
-# Playlist'ni yuklab olish
-python main.py -p "https://www.youtube.com/playlist?list=PLrAXtmRdnEQy4Qrp4kXZpv9_k5-S6UzjV"
-
-# Maxsus papkaga saqlash
-python main.py -o "downloads/uzbek_music" "https://www.youtube.com/watch?v=example"
+```
+mp3-downloader/
+├── run.py              # 🎯 ASOSIY FAYL - buni ishga tushiring
+├── config.py           # ⚙️ Sozlamalar
+├── utils.py            # 🛠️ Yordamchi funksiyalar  
+├── downloader.py       # 📥 Yuklab olish klassi
+├── telegram_bot_main.py # 🤖 Unified telegram bot
+├── web_app.py          # 🌐 Web interface
+├── requirements_clean.txt # 📋 Dependencies
+└── README.md           # 📚 Bu fayl
 ```
 
-## Texnik ma'lumotlar
+## ⚙️ Sozlamalar
 
-- **Til:** Python 3.7+
-- **Asosiy kutubxona:** yt-dlp
-- **Audio format:** MP3 (192 kbps)
-- **Platform:** Windows, macOS, Linux
+`config.py` faylida barcha sozlamalar:
+- Bot token
+- Fayl yo'llari
+- Timeout'lar
+- yt-dlp sozlamalari
 
-## Litsenziya
+## 🎯 Rejimlar
 
-MIT License
+1. **Kichik hajm** - Tez (WebM ~10MB)
+2. **Muvozanatli** - Tavsiya etiladi (M4A ~25MB)
+3. **Yuqori sifat** - Eng yaxshi (M4A ~50MB)  
+4. **MP3 format** - Universal (FFmpeg kerak)
 
-## Ogohlantirish
+## 📊 Cheklovlar
 
-Ushbu dastur faqat shaxsiy foydalanish uchun mo'ljallangan. Mualliflik huquqlariga hurmat qiling va faqat ruxsat etilgan kontentni yuklab oling.
+- **Fayl hajmi:** Cheklovsiz (avtomatik bo'linadi)
+- **Video uzunligi:** Cheklovsiz
+- **Formatlar:** M4A, MP3, WebM, Opus
+- **Telegram limit:** 50MB (avtomatik chunks)
+
+## 🔧 Talablar
+
+- Python 3.7+
+- Internet aloqasi  
+- FFmpeg (MP3 konvertatsiya uchun, ixtiyoriy)
+
+## 📚 Hujjatlar
+
+- [Optimizatsiya Qo'llanmasi](OPTIMIZED_GUIDE.md)
+- [Katta Fayllar Support](LARGE_FILES_SUPPORT.md)
+- [Loyiha Hisoboti](FINAL_REPORT.md)
+
+## 🤝 Hissa Qo'shish
+
+1. Fork qiling
+2. Feature branch yarating
+3. Commit qiling
+4. Pull request yuboring
+
+## 📄 Litsenziya
+
+MIT License - bepul foydalaning!
+
+## ⚠️ Ogohlantirish
+
+Faqat shaxsiy foydalanish uchun. Mualliflik huquqlariga rioya qiling.
+
+---
+
+**🎵 Endi har qanday YouTube audio'ni osongina yuklab oling!**
+
+> Professional darajada, cheklovsiz, tez va ishonchli!

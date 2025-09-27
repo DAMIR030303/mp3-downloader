@@ -2,7 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
 build/
 develop-eggs/
@@ -19,25 +21,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Virtual environments
+# Virtual environments  
 .env
 .venv
 env/
@@ -62,9 +47,21 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Downloads folder
+# Project specific
 downloads/
+audio_downloads/
+test_downloads/
+webm_downloads/
+quick_test_downloads/
+telegram_downloads/
 *.mp3
 *.mp4
 *.webm
 *.m4a
+*.opus
+
+# Temporary files
+temp_*
+audio_*
+*.part*
+*.tmp
