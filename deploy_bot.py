@@ -128,104 +128,184 @@ def split_file(file_path: str, title: str, total_duration: int = 0) -> list:
     return chunks
 
 class AudioDownloader:
-    """Simple audio downloader"""
+    """Enhanced audio downloader with YouTube bypass"""
     
     def __init__(self):
         self.ydl_opts = {
             'format': 'bestaudio/best',
             'restrictfilenames': True,
             'windowsfilenames': True,
+            'no_warnings': True,
+            'ignoreerrors': True,
+            'extract_flat': False,
+            'writesubtitles': False,
+            'writeautomaticsub': False,
             'extractor_args': {
                 'youtube': {
-                    'skip': ['dash', 'hls']
+                    'skip': ['dash', 'hls'],
+                    'player_client': ['android', 'web'],
                 }
             },
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Android 11; Mobile; rv:109.0) Gecko/111.0 Firefox/111.0',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
             }
         }
     
     def get_video_info(self, url: str) -> dict:
-        """Get video information"""
-        try:
-            ydl_opts = {
+        """Get video information with multiple fallback methods"""
+        
+        # Try different extraction methods
+        methods = [
+            # Method 1: Android client
+            {
                 'quiet': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                },
+                'no_warnings': True,
                 'extractor_args': {
                     'youtube': {
+                        'player_client': ['android'],
                         'skip': ['dash', 'hls']
                     }
+                },
+                'http_headers': {
+                    'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip'
                 }
+            },
+            # Method 2: Web client with different user agent
+            {
+                'quiet': True,
+                'no_warnings': True,
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['web'],
+                        'skip': ['dash', 'hls']
+                    }
+                },
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15'
+                }
+            },
+            # Method 3: Basic extraction
+            {
+                'quiet': True,
+                'no_warnings': True
             }
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                
-                duration = info.get('duration', 0)
-                estimated_size = duration * 128 * 1024 // 8 if duration else 0
-                
-                return {
-                    'title': info.get('title', 'Unknown')[:50],
-                    'duration': duration,
-                    'uploader': info.get('uploader', 'Unknown')[:30],
-                    'view_count': info.get('view_count', 0),
-                    'estimated_size': estimated_size,
-                }
-        except Exception as e:
-            return {'error': str(e)}
+        ]
+        
+        for i, method in enumerate(methods, 1):
+            try:
+                with yt_dlp.YoutubeDL(method) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    
+                    if info and info.get('title'):
+                        duration = info.get('duration', 0)
+                        estimated_size = duration * 128 * 1024 // 8 if duration else 0
+                        
+                        return {
+                            'title': info.get('title', 'Unknown')[:50],
+                            'duration': duration,
+                            'uploader': info.get('uploader', 'Unknown')[:30],
+                            'view_count': info.get('view_count', 0),
+                            'estimated_size': estimated_size,
+                        }
+            except Exception as e:
+                logger.warning(f"Method {i} failed: {str(e)[:100]}")
+                continue
+        
+        return {'error': 'Video ma\'lumotlarini olishda xatolik. Boshqa video bilan urinib ko\'ring.'}
     
     async def download_audio(self, url: str, progress_callback: Optional[Callable] = None) -> Tuple[Optional[str], str, int, int]:
-        """Download audio from URL - returns file_path, title, file_size, duration"""
+        """Download audio from URL with multiple fallback methods"""
         temp_id = str(uuid.uuid4())[:8]
         temp_file = None
         
-        try:
-            opts = self.ydl_opts.copy()
-            opts['outtmpl'] = str(downloads_dir / f'temp_{temp_id}.%(ext)s')
-            
-            if progress_callback:
-                def hook(d):
-                    if d['status'] == 'downloading':
-                        try:
-                            percent = (d.get('downloaded_bytes', 0) / d.get('total_bytes', 1)) * 100
-                            asyncio.create_task(progress_callback(int(percent)))
-                        except:
-                            pass
+        # Try different download methods
+        download_methods = [
+            # Method 1: Android client
+            {
+                **self.ydl_opts,
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['android'],
+                        'skip': ['dash', 'hls']
+                    }
+                },
+                'http_headers': {
+                    'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip'
+                }
+            },
+            # Method 2: iOS client
+            {
+                **self.ydl_opts,
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['ios'],
+                        'skip': ['dash', 'hls']
+                    }
+                },
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15'
+                }
+            },
+            # Method 3: Default method
+            self.ydl_opts
+        ]
+        
+        for method_num, opts in enumerate(download_methods, 1):
+            try:
+                opts_copy = opts.copy()
+                opts_copy['outtmpl'] = str(downloads_dir / f'temp_{temp_id}_{method_num}.%(ext)s')
                 
-                opts['progress_hooks'] = [hook]
-            
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                title = sanitize_filename(info.get('title', 'Unknown'))
-                duration = info.get('duration', 0)
+                if progress_callback:
+                    def hook(d):
+                        if d['status'] == 'downloading':
+                            try:
+                                percent = (d.get('downloaded_bytes', 0) / d.get('total_bytes', 1)) * 100
+                                asyncio.create_task(progress_callback(int(percent)))
+                            except:
+                                pass
+                    
+                    opts_copy['progress_hooks'] = [hook]
                 
-                # Find downloaded file
-                for file_path in downloads_dir.glob(f'temp_{temp_id}.*'):
-                    if file_path.suffix in ['.webm', '.m4a', '.mp3', '.opus']:
-                        temp_file = str(file_path)
-                        break
-                
-                if not temp_file:
-                    return None, "File not found", 0, 0
-                
-                # Rename file
-                final_file = downloads_dir / f"{title}{Path(temp_file).suffix}"
-                counter = 1
-                while final_file.exists():
-                    final_file = downloads_dir / f"{title}_{counter}{Path(temp_file).suffix}"
-                    counter += 1
-                
-                shutil.move(temp_file, final_file)
-                file_size = os.path.getsize(final_file)
-                
-                return str(final_file), title, file_size, duration
-                
-        except Exception as e:
-            if temp_file and os.path.exists(temp_file):
-                os.remove(temp_file)
-            return None, str(e), 0, 0
+                with yt_dlp.YoutubeDL(opts_copy) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    title = sanitize_filename(info.get('title', 'Unknown'))
+                    duration = info.get('duration', 0)
+                    
+                    # Find downloaded file
+                    for file_path in downloads_dir.glob(f'temp_{temp_id}_{method_num}.*'):
+                        if file_path.suffix in ['.webm', '.m4a', '.mp3', '.opus']:
+                            temp_file = str(file_path)
+                            break
+                    
+                    if temp_file and os.path.exists(temp_file):
+                        # Rename file
+                        final_file = downloads_dir / f"{title}{Path(temp_file).suffix}"
+                        counter = 1
+                        while final_file.exists():
+                            final_file = downloads_dir / f"{title}_{counter}{Path(temp_file).suffix}"
+                            counter += 1
+                        
+                        shutil.move(temp_file, final_file)
+                        file_size = os.path.getsize(final_file)
+                        
+                        return str(final_file), title, file_size, duration
+                        
+            except Exception as e:
+                logger.warning(f"Download method {method_num} failed: {str(e)[:100]}")
+                if temp_file and os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                    except:
+                        pass
+                continue
+        
+        return None, "Videoni yuklab olishda xatolik. Boshqa video bilan urinib ko'ring yoki keyinroq qayta urinib ko'ring.", 0, 0
 
 # Initialize downloader
 downloader = AudioDownloader()
@@ -308,7 +388,28 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
     info = downloader.get_video_info(url)
     
     if 'error' in info:
-        await status_msg.edit_text(f"❌ Xatolik: {info['error']}")
+        error_msg = info['error']
+        
+        # Provide helpful suggestions for bot detection errors
+        if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
+            helpful_msg = f"""❌ YouTube bot detection xatoligi
+
+🔧 **Yechimlar:**
+1. **Boshqa video** bilan urinib ko'ring
+2. **Kichikroq/mashhur videolar** yaxshi ishlaydi  
+3. **Bir necha daqiqadan keyin** qayta urinib ko'ring
+4. **Qisqa videolar** (5-10 daqiqa) bilan sinab ko'ring
+
+💡 **Test uchun tavsiya:**
+• Mashhur music videolar
+• Kichik tutorial videolar
+• Podcast'ning qisqa qismlari
+
+Keyinroq qayta urinib ko'ring! 🔄"""
+        else:
+            helpful_msg = f"❌ Xatolik: {error_msg}\n\n💡 Boshqa video bilan urinib ko'ring!"
+        
+        await status_msg.edit_text(helpful_msg)
         return
     
     duration = format_duration(info['duration'])
