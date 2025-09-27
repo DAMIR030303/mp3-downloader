@@ -1,45 +1,69 @@
 # MP3 Downloader 🎵
 
-YouTube videolaridan MP3 formatida audio yuklab olish uchun sodda Python dasturi.
+YouTube videolaridan audio yuklab olish uchun to'liq paket:
+- 🖥️ **Command Line** versiya
+- 🌐 **Web App** (Flask)
+- 🤖 **Telegram Bot**
 
 ## Xususiyatlari
 
-- YouTube videolaridan yuqori sifatli MP3 yuklab olish
+- YouTube videolaridan yuqori sifatli audio yuklab olish (M4A, MP3, WebM)
 - Playlist'larni to'liq yuklab olish
-- 192 kbps sifatda audio
+- Web interfeys orqali oson foydalanish
+- Telegram bot orqali tez yuklab olish
 - O'zbek tilida interfeys
-- Sodda foydalanish
+- FFmpeg'siz ham ishlaydi
 
 ## O'rnatish
 
 1. Repository'ni klonlash:
 ```bash
-git clone https://github.com/yourusername/mp3-downloader.git
+git clone https://github.com/DAMIR030303/mp3-downloader.git
 cd mp3-downloader
 ```
 
-2. Kerakli kutubxonalarni o'rnatish:
+2. Virtual environment yaratish (tavsiya etiladi):
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
+```
+
+3. Kerakli kutubxonalarni o'rnatish:
 ```bash
 pip install -r requirements.txt
 ```
 
-**Muhim:** FFmpeg ham kerak bo'ladi. Windows uchun [FFmpeg](https://ffmpeg.org/download.html) yuklab olib PATH'ga qo'shing.
+## Foydalanish usullari
 
-## Foydalanish
+### 1. 🖥️ Command Line
 
-### Bitta video yuklab olish:
+**FFmpeg bilan (MP3 format):**
 ```bash
 python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-### Playlist yuklab olish:
+**FFmpeg'siz (M4A/WebM format):**
 ```bash
-python main.py -p "https://www.youtube.com/playlist?list=PLAYLIST_ID"
+python main_no_ffmpeg.py "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-### Boshqa papkaga saqlash:
+### 2. 🌐 Web App
+
 ```bash
-python main.py -o "mening_musiqalarim" "https://www.youtube.com/watch?v=VIDEO_ID"
+python web_app.py
+```
+Keyin brauzerda: http://localhost:5000
+
+### 3. 🤖 Telegram Bot
+
+1. @BotFather'dan bot yarating va token oling
+2. `telegram_bot.py` faylida `BOT_TOKEN` o'rnating
+3. Botni ishga tushiring:
+```bash
+python telegram_bot.py
 ```
 
 ## Misollar
