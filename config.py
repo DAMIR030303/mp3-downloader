@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 # Bot Configuration
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8379762562:AAGwwMRueY17BAmo-HJgLU2zKTTsESswKLs")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 
 # Paths
 BASE_DIR = Path(__file__).parent
