@@ -512,49 +512,66 @@ Keyinroq qayta urinib ko'ring! 🔄"""
     views = f"{info['view_count']:,}" if info['view_count'] else "0"
     estimated_size = format_file_size(info['estimated_size'])
     
-    parts_info = ""
-    if info['estimated_size'] > MAX_TELEGRAM_SIZE:
-        parts = math.ceil(info['estimated_size'] / CHUNK_SIZE)
-        parts_info = f"\n📦 {parts} qismga bo'linadi"
+    # Store URL in context to avoid callback data issues
+    user_id = update.effective_user.id
+    context.user_data[f'url_{user_id}'] = url
     
-    video_info_text = f"""🎵 {info['title']}
+    # Clean title and uploader for display (remove problematic characters)
+    clean_title = info['title'].replace('*', '').replace('_', '').replace('`', '').replace('[', '').replace(']', '')[:60]
+    clean_uploader = info['uploader'].replace('*', '').replace('_', '').replace('`', '')[:30]
+    
+    video_info_text = f"""🎵 {clean_title}
 
-👤 {info['uploader']}
+👤 {clean_uploader}
 ⏱ {duration} | 👀 {views}
 📊 ~{estimated_size}
 
 Format tanlang:"""
     
-    # Format selection keyboard
+    # Format selection keyboard with short callback data
     keyboard = [
         [
-            InlineKeyboardButton("🎵 MP3 Audio", callback_data=f"format:mp3:{url}"),
-            InlineKeyboardButton("🎶 M4A Audio", callback_data=f"format:m4a:{url}")
+            InlineKeyboardButton("🎵 MP3 Audio", callback_data=f"fmt:mp3:{user_id}"),
+            InlineKeyboardButton("🎶 M4A Audio", callback_data=f"fmt:m4a:{user_id}")
         ],
         [
-            InlineKeyboardButton("📹 MP4 Video (720p)", callback_data=f"format:mp4_720:{url}"),
-            InlineKeyboardButton("📺 MP4 Video (480p)", callback_data=f"format:mp4_480:{url}")
+            InlineKeyboardButton("📹 MP4 Video (720p)", callback_data=f"fmt:mp4_720:{user_id}"),
+            InlineKeyboardButton("📺 MP4 Video (480p)", callback_data=f"fmt:mp4_480:{user_id}")
         ],
         [
-            InlineKeyboardButton("🎧 Best Audio Quality", callback_data=f"format:best_audio:{url}")
+            InlineKeyboardButton("🎧 Best Audio Quality", callback_data=f"fmt:best_audio:{user_id}")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await status_msg.edit_text(video_info_text, reply_markup=reply_markup)
+    try:
+        await status_msg.edit_text(video_info_text, reply_markup=reply_markup)
+    except Exception as e:
+        # Fallback: send new message if edit fails
+        try:
+            await status_msg.delete()
+        except:
+            pass
+        await update.message.reply_text(video_info_text, reply_markup=reply_markup)
 
 async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle format selection"""
     query = update.callback_query
     await query.answer()
     
-    # Parse callback data: format:type:url
+    # Parse callback data: fmt:type:user_id
     parts = query.data.split(':', 2)
     if len(parts) != 3:
         await query.edit_message_text("❌ Noto'g'ri format tanlandi.")
         return
     
-    _, format_type, url = parts
+    _, format_type, user_id = parts
+    
+    # Get URL from context
+    url = context.user_data.get(f'url_{user_id}')
+    if not url:
+        await query.edit_message_text("❌ URL topilmadi. Qayta urinib ko'ring.")
+        return
     
     # Format display names
     format_names = {
@@ -580,6 +597,12 @@ async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await progress_msg.edit_text(f"❌ Xatolik: {title}")
         return
     
+    # Clean up URL from context
+    try:
+        del context.user_data[f'url_{user_id}']
+    except:
+        pass
+    
     try:
         if file_size > MAX_TELEGRAM_SIZE:
             # Show preparing message
@@ -596,7 +619,8 @@ async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("📦 Barcha qismlar", callback_data=f"all_parts:{file_path}")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            parts_info = f"""🎵 {title}
+            clean_title = title.replace('*', '').replace('_', '').replace('`', '')[:50]
+            parts_info = f"""🎵 {clean_title}
 📁 Format: {format_name}
 
 📊 Jami hajmi: {format_file_size(file_size)}
@@ -605,10 +629,7 @@ async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Qaysi qismni tanlaysiz?"""
             
-            await progress_msg.edit_text(
-                parts_info,
-                reply_markup=reply_markup
-            )
+            await progress_msg.edit_text(parts_info, reply_markup=reply_markup)
             
             # Store chunks info for later use
             context.user_data[f'chunks_{query.message.chat_id}'] = chunks
@@ -623,7 +644,7 @@ Qaysi qismni tanlaysiz?"""
                         chat_id=query.message.chat_id,
                         audio=media_file,
                         title=title,
-                        caption=f"🎵 {title}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
+                        caption=f"🎵 {title[:50]}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
                         read_timeout=UPLOAD_TIMEOUT,
                         write_timeout=UPLOAD_TIMEOUT
                     )
@@ -632,7 +653,7 @@ Qaysi qismni tanlaysiz?"""
                     await context.bot.send_video(
                         chat_id=query.message.chat_id,
                         video=media_file,
-                        caption=f"📹 {title}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
+                        caption=f"📹 {title[:50]}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
                         read_timeout=UPLOAD_TIMEOUT,
                         write_timeout=UPLOAD_TIMEOUT
                     )
@@ -641,7 +662,7 @@ Qaysi qismni tanlaysiz?"""
             os.remove(file_path)
         
     except Exception as e:
-        await progress_msg.edit_text(f"❌ Xatolik: {str(e)}")
+        await progress_msg.edit_text(f"❌ Xatolik: {str(e)[:100]}")
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -752,7 +773,7 @@ def main():
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CallbackQueryHandler(format_callback, pattern="^format:"))
+    application.add_handler(CallbackQueryHandler(format_callback, pattern="^fmt:"))
     application.add_handler(CallbackQueryHandler(part_callback, pattern="^(part:|all_parts:)"))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(youtube\.com|youtu\.be)'), handle_url))
     
