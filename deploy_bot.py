@@ -247,16 +247,48 @@ class AudioDownloader:
         
         return {'error': 'Video ma\'lumotlarini olishda xatolik. Boshqa video bilan urinib ko\'ring yoki keyinroq qayta urinib ko\'ring.'}
     
-    async def download_audio(self, url: str, progress_callback: Optional[Callable] = None) -> Tuple[Optional[str], str, int, int]:
-        """Download audio from URL with multiple fallback methods"""
+    async def download_media(self, url: str, format_type: str, progress_callback: Optional[Callable] = None) -> Tuple[Optional[str], str, int, int]:
+        """Download media from URL with specified format"""
         temp_id = str(uuid.uuid4())[:8]
         temp_file = None
         
-        # Try different download methods
+        # Format configurations
+        format_configs = {
+            'mp3': {
+                'format': 'bestaudio[ext=m4a]/bestaudio',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'extension': 'mp3'
+            },
+            'm4a': {
+                'format': 'bestaudio[ext=m4a]/bestaudio',
+                'extension': 'm4a'
+            },
+            'best_audio': {
+                'format': 'bestaudio/best',
+                'extension': 'auto'
+            },
+            'mp4_720': {
+                'format': 'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best',
+                'extension': 'mp4'
+            },
+            'mp4_480': {
+                'format': 'best[height<=480][ext=mp4]/best[height<=480]/best[ext=mp4]/best',
+                'extension': 'mp4'
+            }
+        }
+        
+        format_config = format_configs.get(format_type, format_configs['best_audio'])
+        
+        # Try different download methods with format-specific config
         download_methods = [
             # Method 1: Android client
             {
                 **self.ydl_opts,
+                'format': format_config['format'],
                 'extractor_args': {
                     'youtube': {
                         'player_client': ['android'],
@@ -264,12 +296,30 @@ class AudioDownloader:
                     }
                 },
                 'http_headers': {
-                    'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip'
+                    'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip',
+                    'X-YouTube-Client-Name': '3',
+                    'X-YouTube-Client-Version': '17.31.35'
                 }
             },
-            # Method 2: iOS client
+            # Method 2: TV client
             {
                 **self.ydl_opts,
+                'format': format_config['format'],
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['tv_embedded'],
+                        'skip': ['dash', 'hls']
+                    }
+                },
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebKit/538.1',
+                    'X-YouTube-Client-Name': '85'
+                }
+            },
+            # Method 3: iOS client
+            {
+                **self.ydl_opts,
+                'format': format_config['format'],
                 'extractor_args': {
                     'youtube': {
                         'player_client': ['ios'],
@@ -277,12 +327,17 @@ class AudioDownloader:
                     }
                 },
                 'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15'
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15',
+                    'X-YouTube-Client-Name': '5',
+                    'X-YouTube-Client-Version': '17.33.2'
                 }
-            },
-            # Method 3: Default method
-            self.ydl_opts
+            }
         ]
+        
+        # Add postprocessors if needed (for MP3 conversion)
+        if 'postprocessors' in format_config:
+            for method in download_methods:
+                method['postprocessors'] = format_config['postprocessors']
         
         for method_num, opts in enumerate(download_methods, 1):
             try:
@@ -305,18 +360,25 @@ class AudioDownloader:
                     title = sanitize_filename(info.get('title', 'Unknown'))
                     duration = info.get('duration', 0)
                     
-                    # Find downloaded file
-                    for file_path in downloads_dir.glob(f'temp_{temp_id}_{method_num}.*'):
-                        if file_path.suffix in ['.webm', '.m4a', '.mp3', '.opus']:
-                            temp_file = str(file_path)
+                    # Find downloaded file (including post-processed files)
+                    possible_extensions = ['.mp3', '.m4a', '.mp4', '.webm', '.opus']
+                    if format_config['extension'] != 'auto':
+                        possible_extensions = [f".{format_config['extension']}"] + possible_extensions
+                    
+                    for ext in possible_extensions:
+                        pattern = f'temp_{temp_id}_{method_num}*{ext}'
+                        files = list(downloads_dir.glob(pattern))
+                        if files:
+                            temp_file = str(files[0])
                             break
                     
                     if temp_file and os.path.exists(temp_file):
-                        # Rename file
-                        final_file = downloads_dir / f"{title}{Path(temp_file).suffix}"
+                        # Rename file with appropriate extension
+                        file_ext = Path(temp_file).suffix
+                        final_file = downloads_dir / f"{title}{file_ext}"
                         counter = 1
                         while final_file.exists():
-                            final_file = downloads_dir / f"{title}_{counter}{Path(temp_file).suffix}"
+                            final_file = downloads_dir / f"{title}_{counter}{file_ext}"
                             counter += 1
                         
                         shutil.move(temp_file, final_file)
@@ -325,7 +387,7 @@ class AudioDownloader:
                         return str(final_file), title, file_size, duration
                         
             except Exception as e:
-                logger.warning(f"Download method {method_num} failed: {str(e)[:100]}")
+                logger.warning(f"Download method {method_num} failed for {format_type}: {str(e)[:100]}")
                 if temp_file and os.path.exists(temp_file):
                     try:
                         os.remove(temp_file)
@@ -333,7 +395,7 @@ class AudioDownloader:
                         pass
                 continue
         
-        return None, "Videoni yuklab olishda xatolik. Boshqa video bilan urinib ko'ring yoki keyinroq qayta urinib ko'ring.", 0, 0
+        return None, f"{format_type.upper()} formatda yuklab olishda xatolik. Boshqa format yoki video bilan urinib ko'ring.", 0, 0
 
 # Initialize downloader
 downloader = AudioDownloader()
@@ -344,27 +406,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🚀 **Unlimited Audio Bot (@unlimited_audio_bot)**
 
 **Xususiyatlar:**
-• Har qanday hajmdagi video yuklab olish
+• Har qanday hajmdagi video/audio yuklab olish
+• Turli formatlar: MP3, M4A, MP4 video
 • Katta fayllar uchun aniq qism tanlash
 • Har bir qism uchun aniq vaqt va hajm ko'rsatish
 • Professional progress tracking
 • 24/7 ishlaydigan xizmat
 
 **Qanday ishlaydi:**
-1. **Kichik fayllar (<50MB)** - Darhol yuboriladi
-2. **Katta fayllar (>50MB)** - Qismlar menyusi:
+1. **YouTube URL yuboring**
+2. **Format tanlang:**
+   🎵 MP3 Audio (192kbps)
+   🎶 M4A Audio (original)
+   🎧 Best Audio Quality
+   📹 MP4 Video (720p/480p)
 
-**Yangilangan misol: 9 qismga bo'lingan video**
+3. **Kichik fayllar** - Darhol yuboriladi
+4. **Katta fayllar** - Qismlar menyusi
+
+**Misol: Format tanlash**
 ```
-📊 Jami hajmi: 500.0 MB
-⏱ Jami davomiyligi: 1:30:00
-📦 9 qismga bo'lindi
+🎵 Video Title
+👤 Channel Name
+⏱ 45:30 | 👀 1,234,567
+📊ぺ500.0 MB
 
-📀 1-qism | 45.0 MB | ⏱ 0:00-10:00
-📀 2-qism | 45.0 MB | ⏱ 10:00-20:00
-📀 3-qism | 45.0 MB | ⏱ 20:00-30:00
-...
-📦 Barcha qismlar
+Format tanlang:
+🎵 MP3 Audio    🎶 M4A Audio
+📹 MP4 720p     📺 MP4 480p
+🎧 Best Quality
 ```
 
 **YouTube havola yuboring!** 👇
@@ -449,32 +519,64 @@ Keyinroq qayta urinib ko'ring! 🔄"""
         parts = math.ceil(info['estimated_size'] / CHUNK_SIZE)
         parts_info = f"\n📦 {parts} qismga bo'linadi"
     
-    video_info_text = f"""🎵 {info['title']}
+    video_info_text = f"""🎵 **{info['title']}**
 
 👤 {info['uploader']}
 ⏱ {duration} | 👀 {views}
-📊 ~{estimated_size}{parts_info}"""
+📊 ~{estimated_size}
+
+**Format tanlang:**"""
     
-    keyboard = [[InlineKeyboardButton("🎵 Yuklab Olish", callback_data=f"download:{url}")]]
+    # Format selection keyboard
+    keyboard = [
+        [
+            InlineKeyboardButton("🎵 MP3 Audio", callback_data=f"format:mp3:{url}"),
+            InlineKeyboardButton("🎶 M4A Audio", callback_data=f"format:m4a:{url}")
+        ],
+        [
+            InlineKeyboardButton("📹 MP4 Video (720p)", callback_data=f"format:mp4_720:{url}"),
+            InlineKeyboardButton("📺 MP4 Video (480p)", callback_data=f"format:mp4_480:{url}")
+        ],
+        [
+            InlineKeyboardButton("🎧 Best Audio Quality", callback_data=f"format:best_audio:{url}")
+        ]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await status_msg.edit_text(video_info_text, reply_markup=reply_markup)
+    await status_msg.edit_text(video_info_text, parse_mode='Markdown', reply_markup=reply_markup)
 
-async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle download button press"""
+async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle format selection"""
     query = update.callback_query
     await query.answer()
     
-    url = query.data.split(':', 1)[1]
-    progress_msg = await query.edit_message_text("⏳ Yuklab olish boshlandi... 0%")
+    # Parse callback data: format:type:url
+    parts = query.data.split(':', 2)
+    if len(parts) != 3:
+        await query.edit_message_text("❌ Noto'g'ri format tanlandi.")
+        return
+    
+    _, format_type, url = parts
+    
+    # Format display names
+    format_names = {
+        'mp3': '🎵 MP3 Audio',
+        'm4a': '🎶 M4A Audio',
+        'best_audio': '🎧 Best Audio Quality',
+        'mp4_720': '📹 MP4 Video (720p)',
+        'mp4_480': '📺 MP4 Video (480p)'
+    }
+    
+    format_name = format_names.get(format_type, format_type.upper())
+    progress_msg = await query.edit_message_text(f"⏳ {format_name} formatda yuklab olinmoqda... 0%")
     
     async def update_progress(percent: int):
         try:
-            await progress_msg.edit_text(f"⏳ Yuklab olinmoqda... {percent}%")
+            await progress_msg.edit_text(f"⏳ {format_name} yuklab olinmoqda... {percent}%")
         except:
             pass
     
-    file_path, title, file_size, duration = await downloader.download_audio(url, update_progress)
+    file_path, title, file_size, duration = await downloader.download_media(url, format_type, update_progress)
     
     if not file_path:
         await progress_msg.edit_text(f"❌ Xatolik: {title}")
@@ -487,7 +589,7 @@ async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             chunks = split_file(file_path, title, duration)
             
-            # Show parts selection menu with detailed info
+            # Show parts selection menu with format info
             keyboard = []
             for chunk in chunks:
                 part_text = f"📀 {chunk['part']}-qism | {chunk['size_mb']} | ⏱ {chunk['duration']}"
@@ -497,6 +599,7 @@ async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             parts_info = f"""🎵 **{title}**
+📁 Format: {format_name}
 
 📊 Jami hajmi: {format_file_size(file_size)}
 ⏱ Jami davomiyligi: {format_duration(duration)}
@@ -516,17 +619,28 @@ async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await progress_msg.edit_text(f"📊 Tayyor: {format_file_size(file_size)}\n📤 Yuborilmoqda...")
             
-            with open(file_path, 'rb') as audio_file:
-                await context.bot.send_audio(
-                    chat_id=query.message.chat_id,
-                    audio=audio_file,
-                    title=title,
-                    caption=f"🎵 {title}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
-                    read_timeout=UPLOAD_TIMEOUT,
-                    write_timeout=UPLOAD_TIMEOUT
-                )
+            # Send as audio or video based on format
+            if format_type in ['mp3', 'm4a', 'best_audio']:
+                with open(file_path, 'rb') as media_file:
+                    await context.bot.send_audio(
+                        chat_id=query.message.chat_id,
+                        audio=media_file,
+                        title=title,
+                        caption=f"🎵 {title}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
+                        read_timeout=UPLOAD_TIMEOUT,
+                        write_timeout=UPLOAD_TIMEOUT
+                    )
+            else:  # Video formats
+                with open(file_path, 'rb') as media_file:
+                    await context.bot.send_video(
+                        chat_id=query.message.chat_id,
+                        video=media_file,
+                        caption=f"📹 {title}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
+                        read_timeout=UPLOAD_TIMEOUT,
+                        write_timeout=UPLOAD_TIMEOUT
+                    )
             
-            await progress_msg.edit_text("✅ Audio yuborildi!")
+            await progress_msg.edit_text(f"✅ {format_name} yuborildi!")
             os.remove(file_path)
         
     except Exception as e:
@@ -641,7 +755,7 @@ def main():
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CallbackQueryHandler(download_callback, pattern="^download:"))
+    application.add_handler(CallbackQueryHandler(format_callback, pattern="^format:"))
     application.add_handler(CallbackQueryHandler(part_callback, pattern="^(part:|all_parts:)"))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(youtube\.com|youtu\.be)'), handle_url))
     
