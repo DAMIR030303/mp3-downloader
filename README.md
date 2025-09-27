@@ -1,52 +1,69 @@
-# 🚀 Unlimited Audio Bot (@unlimited_audio_bot)
+# 🎵 Unlimited Audio Bot
 
-Professional Telegram bot for downloading unlimited audio from YouTube videos.
+Professional Telegram bot for downloading unlimited audio from YouTube videos with smart file splitting.
 
-## ⚡ Quick Deploy (5 minutes)
+## 🚀 Quick Deploy (Railway)
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/unlimited-audio-bot)
-
-**Step-by-step guide:** [RAILWAY_QUICK_START.md](RAILWAY_QUICK_START.md)
+1. **Create Bot**: [@BotFather](https://t.me/BotFather) → `/newbot` → Get token
+2. **Deploy**: Fork repo → Connect to Railway → Deploy
+3. **Config**: Add `BOT_TOKEN` environment variable
+4. **Done**: Bot runs 24/7 automatically!
 
 ## ✨ Features
 
-- **🚀 Unlimited file size** - No restrictions, auto-splitting for 50MB+ files
-- **📊 Progress tracking** - Real-time download progress
-- **⚡ Fast downloads** - Best available audio quality (M4A/WebM)
-- **🤖 Smart bot** - Professional Telegram interface
-- **☁️ 24/7 uptime** - Runs continuously on Railway
-- **🔧 Production-ready** - Optimized code, error handling
+- **🚀 Unlimited size** - Downloads any size video (auto-splits 50MB+)
+- **📊 Progress tracking** - Real-time download progress  
+- **⚡ Smart chunking** - Users choose specific parts or download all
+- **🎯 High quality** - Best available audio format (M4A/WebM)
+- **🤖 Clean interface** - Professional Telegram bot experience
 
-## 🎯 Bot Commands
+## 🎯 Usage
 
-- `/start` - Welcome message and bot info
-- `/help` - Usage instructions
-- **Send YouTube URL** - Instantly download audio
+1. Start: `/start`
+2. Send YouTube URL
+3. Click "🎵 Yuklab Olish"
+4. **Large files**: Choose parts or download all
 
-## 🎵 Usage Example
-
+### Example: Large File (500MB)
 ```
-You: https://youtu.be/dQw4w9WgXcQ
-Bot: 🎵 Rick Astley - Never Gonna Give You Up
-     👤 RickAstleyVEVO
-     ⏱ 3:33 | 👀 1,234,567,890
-     📊 ~8.5MB
-     
-     [🎵 Yuklab Olish] button
-     
-     ⏳ Yuklab olinmoqda... 85%
-     ✅ Audio yuborildi!
+🎵 Long Podcast Episode
+📊 Jami: 500MB  
+📦 9 qismga bo'lindi
+
+📀 1-qism (45MB) ~1-10 daq
+📀 2-qism (45MB) ~11-20 daq
+📀 3-qism (45MB) ~21-30 daq
+...
+📦 Barchasi (download all parts)
 ```
 
-## 🚂 Railway Deployment
+## 🛠 Local Development
 
-### Manual Setup:
-1. **Create bot:** [@BotFather](https://t.me/BotFather) → `/newbot` → `@unlimited_audio_bot`
-2. **Deploy:** [railway.app](https://railway.app) → New Project → GitHub repo
-3. **Environment:** Add `BOT_TOKEN=your_token_here`
-4. **Done!** Bot will start automatically
+```bash
+pip install -r requirements.txt
+export BOT_TOKEN="your_bot_token"
+python deploy_bot.py
+```
 
-### Expected Deploy Logs:
+## 🔧 Railway Files
+
+- `deploy_bot.py` - Main bot code
+- `requirements.txt` - Dependencies  
+- `railway.toml` - Railway config
+- `nixpacks.toml` - Build config
+- `Procfile` - Start command
+
+## 📝 Environment Variables
+
+```env
+BOT_TOKEN=your_telegram_bot_token_here
+```
+
+---
+
+**Bot**: [@unlimited_audio_bot](https://t.me/unlimited_audio_bot)  
+**Deploy**: [Railway](https://railway.app)  
+Made with ❤️ for unlimited audio downloads
 ```
 🚀 Unlimited Audio Bot (@unlimited_audio_bot) started on Railway!
 🤖 Bot Token: 1234567890...

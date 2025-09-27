@@ -1,11 +1,3 @@
-# MP3 Downloader Requirements
-# Railway auto-detects requirements.txt
-
-# YouTube downloading
-yt-dlp>=2024.1.0
-
-# Telegram bot
-python-telegram-bot>=20.0
-
-# Web interface (optional)
-flask>=3.0.0
+yt-dlp==2024.9.27
+python-telegram-bot==21.6
+httpx==0.27.2
