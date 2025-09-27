@@ -11,7 +11,8 @@ if [ -z "$BOT_TOKEN" ]; then
 fi
 
 echo "✅ BOT_TOKEN configured"
-echo "🤖 Starting Unlimited Audio Bot..."
+echo "🤖 Bot: @unlimited_audio_bot"
+echo "🔋 Starting production bot..."
 
 # Start the telegram bot
-exec python telegram_bot_main.py
+exec python deploy_bot.py

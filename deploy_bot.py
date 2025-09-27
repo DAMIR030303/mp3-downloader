@@ -327,8 +327,9 @@ def main():
     application.add_handler(CallbackQueryHandler(download_callback, pattern="^download:"))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'(youtube\.com|youtu\.be)'), handle_url))
     
-    print("🚀 Unlimited Audio Bot started on Railway!")
+    print("🚀 Unlimited Audio Bot (@unlimited_audio_bot) started on Railway!")
     print(f"🤖 Bot Token: {BOT_TOKEN[:10]}...")
+    print("📱 Bot tayyor - Telegram'da /start yuboring!")
     application.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
