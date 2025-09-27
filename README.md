@@ -75,8 +75,9 @@ unlimited-audio-bot/
 | **Downloader** | yt-dlp (latest) |
 | **Platform** | Railway (Nixpacks/Docker) |
 | **File Limit** | Unlimited (auto-chunking) |
-| **Audio Format** | M4A, WebM, MP3 |
-| **Max Quality** | Best available |
+| **Audio Format** | M4A, WebM, MP3 (smart selection) |
+| **Max Quality** | Best available from YouTube |
+| **Part Selection** | Interactive menu for large files |
 
 ## 🔧 Local Development
 
@@ -100,7 +101,7 @@ python deploy_bot.py
 | "BOT_TOKEN not set" | Add environment variable in Railway |
 | Build fails | Check Railway logs, try Docker deploy |
 | Bot not responding | Verify token with @BotFather |
-| Large files timeout | Files >50MB split automatically |
+| Large files timeout | Interactive part selection available |
 
 ## 📊 Performance
 
@@ -120,10 +121,11 @@ Respect YouTube's terms of service and copyright laws. For personal use only.
 
 ---
 
-**🎵 Download any YouTube audio instantly - unlimited and free!**
+**🎵 Download any YouTube audio with smart part selection - unlimited and free!**
 
 > **Bot:** [@unlimited_audio_bot](https://t.me/unlimited_audio_bot)  
+> **Feature:** Smart part selection for large files  
 > **Deploy:** [5-minute guide](RAILWAY_QUICK_START.md)  
 > **Status:** 🟢 Production Ready
 
-**Professional • Fast • Unlimited • Free** 🚀
+**Professional • Smart • Unlimited • Free** 🚀
