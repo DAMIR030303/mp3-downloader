@@ -1,0 +1,30 @@
+# Railway ignore file - files not to include in deployment
+
+# Development files
+run.py
+main_no_ffmpeg.py
+web_app.py
+
+# Documentation (optional - keep if you want them in production)
+BOT_NAMES_SUGGESTIONS.md
+PROJECT_CLEAN_SUMMARY.md
+OPTIMIZED_GUIDE.md
+
+# Local directories
+telegram_downloads/
+templates/
+__pycache__/
+
+# Development dependencies
+requirements_clean.txt
+
+# Keep these files for production:
+# telegram_bot_main.py
+# config.py  
+# utils.py
+# downloader.py
+# requirements.txt
+# Procfile
+# start.sh
+# railway.json
+# nixpacks.toml
