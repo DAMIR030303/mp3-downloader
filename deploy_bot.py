@@ -23,6 +23,13 @@ from telegram.ext import (
 from telegram.request import HTTPXRequest
 import yt_dlp
 
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Configuration
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHUNK_SIZE = 45 * 1024 * 1024  # 45MB
@@ -58,20 +65,40 @@ def format_file_size(size_bytes: int) -> str:
         return f"{size_bytes/(1024**3):.1f} GB"
 
 def format_duration(seconds: int) -> str:
-    """Format duration in MM:SS format"""
-    if not seconds:
+    """Format duration in MM:SS or HH:MM:SS format"""
+    if seconds is None:
         return "Unknown"
-    minutes = seconds // 60
+    
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
     secs = seconds % 60
-    return f"{minutes}:{secs:02d}"
+    
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    else:
+        return f"{minutes}:{secs:02d}"
 
-def split_file(file_path: str, title: str) -> list:
-    """Split large file into chunks with metadata"""
+def calculate_part_duration(total_duration: int, part_num: int, total_parts: int) -> str:
+    """Calculate estimated duration for each part"""
+    if not total_duration or total_parts <= 0:
+        return "Unknown"
+    
+    duration_per_part = total_duration / total_parts
+    start_time = int((part_num - 1) * duration_per_part)
+    end_time = int(min(part_num * duration_per_part, total_duration))
+    
+    start_formatted = format_duration(start_time)
+    end_formatted = format_duration(end_time)
+    
+    return f"{start_formatted}-{end_formatted}"
+
+def split_file(file_path: str, title: str, total_duration: int = 0) -> list:
+    """Split large file into chunks with detailed metadata"""
     chunks = []
     file_size = os.path.getsize(file_path)
     
     if file_size <= MAX_TELEGRAM_SIZE:
-        return [{'path': file_path, 'part': 1, 'total': 1, 'size': file_size, 'title': title}]
+        return [{'path': file_path, 'part': 1, 'total': 1, 'size': file_size, 'title': title, 'duration': format_duration(total_duration) if total_duration else "Unknown"}]
     
     total_parts = math.ceil(file_size / CHUNK_SIZE)
     
@@ -85,13 +112,17 @@ def split_file(file_path: str, title: str) -> list:
             with open(chunk_filename, 'wb') as chunk_file:
                 chunk_file.write(chunk_data)
             
+            # Calculate duration for this part
+            part_duration = calculate_part_duration(total_duration, part_num + 1, total_parts)
+            
             chunks.append({
                 'path': chunk_filename,
                 'part': part_num + 1,
                 'total': total_parts,
                 'size': len(chunk_data),
                 'title': title,
-                'duration_per_part': f"~{(part_num * 10) + 1}-{min((part_num + 1) * 10, total_parts * 10)} daq"
+                'duration': part_duration,
+                'size_mb': f"{len(chunk_data)/(1024*1024):.1f} MB"
             })
     
     return chunks
@@ -125,8 +156,8 @@ class AudioDownloader:
         except Exception as e:
             return {'error': str(e)}
     
-    async def download_audio(self, url: str, progress_callback: Optional[Callable] = None) -> Tuple[Optional[str], str, int]:
-        """Download audio from URL"""
+    async def download_audio(self, url: str, progress_callback: Optional[Callable] = None) -> Tuple[Optional[str], str, int, int]:
+        """Download audio from URL - returns file_path, title, file_size, duration"""
         temp_id = str(uuid.uuid4())[:8]
         temp_file = None
         
@@ -148,6 +179,7 @@ class AudioDownloader:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 title = sanitize_filename(info.get('title', 'Unknown'))
+                duration = info.get('duration', 0)
                 
                 # Find downloaded file
                 for file_path in downloads_dir.glob(f'temp_{temp_id}.*'):
@@ -156,7 +188,7 @@ class AudioDownloader:
                         break
                 
                 if not temp_file:
-                    return None, "File not found", 0
+                    return None, "File not found", 0, 0
                 
                 # Rename file
                 final_file = downloads_dir / f"{title}{Path(temp_file).suffix}"
@@ -168,12 +200,12 @@ class AudioDownloader:
                 shutil.move(temp_file, final_file)
                 file_size = os.path.getsize(final_file)
                 
-                return str(final_file), title, file_size
+                return str(final_file), title, file_size, duration
                 
         except Exception as e:
             if temp_file and os.path.exists(temp_file):
                 os.remove(temp_file)
-            return None, str(e), 0
+            return None, str(e), 0, 0
 
 # Initialize downloader
 downloader = AudioDownloader()
@@ -185,16 +217,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 **Xususiyatlar:**
 • Har qanday hajmdagi video yuklab olish
-• Katta fayllar uchun qism tanlash imkoniyati
-• Progress tracking va professional interface
-• 24/7 ishlaydi
+• Katta fayllar uchun aniq qism tanlash
+• Har bir qism uchun aniq vaqt va hajm ko'rsatish
+• Professional progress tracking
+• 24/7 ishlaydigan xizmat
 
 **Qanday ishlaydi:**
-1. **Kichik fayllar** - Darhol yuboriladi
-2. **Katta fayllar** - Qismlar menyusi ko'rsatiladi:
-   📀 1-qism (45MB) ~1-10 daq
-   📀 2-qism (45MB) ~11-20 daq
-   📦 Barchasi (barcha qismlar)
+1. **Kichik fayllar (<50MB)** - Darhol yuboriladi
+2. **Katta fayllar (>50MB)** - Qismlar menyusi:
+
+**Yangilangan misol: 9 qismga bo'lingan video**
+```
+📊 Jami hajmi: 500.0 MB
+⏱ Jami davomiyligi: 1:30:00
+📦 9 qismga bo'lindi
+
+📀 1-qism | 45.0 MB | ⏱ 0:00-10:00
+📀 2-qism | 45.0 MB | ⏱ 10:00-20:00
+📀 3-qism | 45.0 MB | ⏱ 20:00-30:00
+...
+📦 Barcha qismlar
+```
 
 **YouTube havola yuboring!** 👇
     """
@@ -284,32 +327,38 @@ async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
     
-    file_path, title, file_size = await downloader.download_audio(url, update_progress)
+    file_path, title, file_size, duration = await downloader.download_audio(url, update_progress)
     
     if not file_path:
         await progress_msg.edit_text(f"❌ Xatolik: {title}")
         return
     
     try:
-        await progress_msg.edit_text(f"📊 Tayyor: {format_file_size(file_size)}")
-        
         if file_size > MAX_TELEGRAM_SIZE:
-            chunks = split_file(file_path, title)
+            # Show preparing message
+            await progress_msg.edit_text(f"📊 Tayyor: {format_file_size(file_size)}\n⚙️ Qismlar tayyorlanmoqda...")
             
-            # Show parts selection menu
+            chunks = split_file(file_path, title, duration)
+            
+            # Show parts selection menu with detailed info
             keyboard = []
             for chunk in chunks:
-                part_text = f"📀 {chunk['part']}-qism ({format_file_size(chunk['size'])}) {chunk['duration_per_part']}"
+                part_text = f"📀 {chunk['part']}-qism | {chunk['size_mb']} | ⏱ {chunk['duration']}"
                 keyboard.append([InlineKeyboardButton(part_text, callback_data=f"part:{chunk['path']}")])
             
-            keyboard.append([InlineKeyboardButton("📦 Barchasi", callback_data=f"all_parts:{file_path}")])
+            keyboard.append([InlineKeyboardButton("📦 Barcha qismlar", callback_data=f"all_parts:{file_path}")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             
+            parts_info = f"""🎵 **{title}**
+
+📊 Jami hajmi: {format_file_size(file_size)}
+⏱ Jami davomiyligi: {format_duration(duration)}
+📦 {len(chunks)} qismga bo'lindi
+
+**Qaysi qismni tanlaysiz?**"""
+            
             await progress_msg.edit_text(
-                f"🎵 **{title}**\n\n"
-                f"📊 Jami: {format_file_size(file_size)}\n"
-                f"📦 {len(chunks)} qismga bo'lindi\n\n"
-                f"**Qaysi qismni yuklab olasiz?**",
+                parts_info,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
             )
@@ -318,12 +367,14 @@ async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data[f'chunks_{query.message.chat_id}'] = chunks
             
         else:
+            await progress_msg.edit_text(f"📊 Tayyor: {format_file_size(file_size)}\n📤 Yuborilmoqda...")
+            
             with open(file_path, 'rb') as audio_file:
                 await context.bot.send_audio(
                     chat_id=query.message.chat_id,
                     audio=audio_file,
                     title=title,
-                    caption=f"🎵 {title}\n📊 {format_file_size(file_size)}",
+                    caption=f"🎵 {title}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
                     read_timeout=UPLOAD_TIMEOUT,
                     write_timeout=UPLOAD_TIMEOUT
                 )
@@ -345,17 +396,33 @@ async def part_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         part_path = query.data.split(':', 1)[1]
         
         try:
-            await query.edit_message_text("📤 Tanlangan qism yuborilmoqda...")
+            await query.edit_message_text("📤 Tanlangan qism tayyor qilinmoqda...")
             
             part_size = os.path.getsize(part_path)
             part_name = Path(part_path).name
+            
+            # Get chunk info from stored data
+            chunks_key = f'chunks_{query.message.chat_id}'
+            chunk_info = None
+            if chunks_key in context.user_data:
+                chunks = context.user_data[chunks_key]
+                for chunk in chunks:
+                    if chunk['path'] == part_path:
+                        chunk_info = chunk
+                        break
+            
+            await query.edit_message_text("📤 Tanlangan qism yuborilmoqda...")
+            
+            caption = f"🎵 Tanlangan qism\n📊 {format_file_size(part_size)}"
+            if chunk_info:
+                caption += f"\n📀 Qism {chunk_info['part']}/{chunk_info['total']}\n⏱ Davomiyligi: {chunk_info['duration']}"
             
             with open(part_path, 'rb') as part_file:
                 await context.bot.send_document(
                     chat_id=query.message.chat_id,
                     document=part_file,
                     filename=part_name,
-                    caption=f"🎵 Tanlangan qism\n📊 {format_file_size(part_size)}",
+                    caption=caption,
                     read_timeout=UPLOAD_TIMEOUT,
                     write_timeout=UPLOAD_TIMEOUT
                 )
@@ -375,10 +442,14 @@ async def part_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if chunks_key in context.user_data:
             chunks = context.user_data[chunks_key]
             
-            await query.edit_message_text(f"📤 Barcha {len(chunks)} qism yuborilmoqda...")
+            await query.edit_message_text(f"📤 Barcha {len(chunks)} qism tayyorlanmoqda...")
             
-            for chunk in chunks:
+            total_sent = 0
+            for i, chunk in enumerate(chunks, 1):
                 try:
+                    # Update progress
+                    await query.edit_message_text(f"📤 {i}/{len(chunks)}-qism yuborilmoqda...")
+                    
                     chunk_size = os.path.getsize(chunk['path'])
                     chunk_name = f"{chunk['title']}_part{chunk['part']}{Path(file_path).suffix}"
                     
@@ -387,17 +458,18 @@ async def part_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             chat_id=query.message.chat_id,
                             document=chunk_file,
                             filename=chunk_name,
-                            caption=f"🎵 {chunk['title']} - Qism {chunk['part']}/{chunk['total']}\n📊 {format_file_size(chunk_size)}\n⏱ {chunk['duration_per_part']}",
+                            caption=f"🎵 {chunk['title']}\n📀 Qism {chunk['part']}/{chunk['total']}\n📊 {chunk['size_mb']}\n⏱ {chunk['duration']}",
                             read_timeout=UPLOAD_TIMEOUT,
                             write_timeout=UPLOAD_TIMEOUT
                         )
                     
                     os.remove(chunk['path'])
+                    total_sent += 1
                     
                 except Exception as e:
                     logger.error(f"Error sending chunk {chunk['part']}: {e}")
             
-            await query.edit_message_text(f"✅ Barcha {len(chunks)} qism yuborildi!")
+            await query.edit_message_text(f"✅ Barcha {total_sent} qism muvaffaqiyatli yuborildi!")
             
             # Clean up original file and chunks data
             if os.path.exists(file_path):
