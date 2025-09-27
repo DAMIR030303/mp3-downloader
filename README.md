@@ -1,115 +1,100 @@
-# 🎵 MP3 Downloader - Professional Edition
+# 🚀 Unlimited Audio Bot
 
-YouTube videolaridan audio yuklab olish uchun professional dastur.
+Professional Telegram bot for downloading audio from YouTube videos.
 
-## ✨ Xususiyatlar
+## ✨ Features
 
-- **🚀 Har qanday hajmdagi video** - Cheklovsiz yuklab olish
-- **⚙️ 4 xil sifat rejimi** - Kichik/Muvozanatli/Yuqori/MP3
-- **📦 Avtomatik fayl bo'lish** - 50MB+ fayllar chunks'ga bo'linadi
-- **🔄 Progress tracking** - Real-time progress ko'rsatish
-- **🤖 Telegram bot** - Unified bot barcha xususiyatlar bilan
-- **🌐 Web interface** - Browser orqali foydalanish
-- **🖥️ CLI tools** - Command line interface
+- **Unlimited file size** - No size restrictions
+- **Automatic file splitting** - Files >50MB split into chunks
+- **Progress tracking** - Real-time download progress
+- **24/7 uptime** - Runs continuously on Railway
+- **High quality audio** - Best available audio format
 
-## 🚀 Bitta Buyruq Bilan Ishga Tushirish
+## 🚀 Quick Deploy to Railway
 
-```bash
-python run.py
-```
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/mp3-downloader)
 
-Bu universal launcher avtomatik ravishda:
-- Requirements o'rnatadi
-- Menyu ko'rsatadi
-- Komponent tanlash imkonini beradi
+### Manual Deploy:
 
-## 📱 Telegram Bot
+1. **Create Telegram Bot:**
+   - Go to [@BotFather](https://t.me/BotFather)
+   - Send `/newbot`
+   - Name: `🚀 Unlimited Audio`
+   - Username: `unlimited_audio_bot` (or any available)
+   - Save the token
 
-### Sozlash:
-1. @BotFather'dan bot yarating
-2. `config.py`da token o'rnating
-3. `python run.py` ishga tushiring
-4. Menyu → "1" (Telegram Bot)
+2. **Deploy to Railway:**
+   - Go to [railway.app](https://railway.app)
+   - Click "New Project" → "Deploy from GitHub repo"
+   - Connect this repository
+   - Add environment variable: `BOT_TOKEN=your_bot_token_here`
+   - Click Deploy
 
-### Xususiyatlar:
-- `/mode` - Sifat rejimini tanlash
-- Inline keyboard'lar
-- Progress tracking
-- Smart file handling
+3. **Test:**
+   - Send `/start` to your bot
+   - Send any YouTube URL
+   - Click "🎵 Yuklab Olish" button
 
-## 🌐 Web Interface
-
-```bash
-python run.py
-# Menyu → 2 (Web Interface)
-# Browser: http://localhost:5000
-```
-
-## 📁 Loyiha Strukturasi
+## 📁 Project Structure
 
 ```
 mp3-downloader/
-├── run.py              # 🎯 ASOSIY FAYL - buni ishga tushiring
-├── config.py           # ⚙️ Sozlamalar
-├── utils.py            # 🛠️ Yordamchi funksiyalar  
-├── downloader.py       # 📥 Yuklab olish klassi
-├── telegram_bot_main.py # 🤖 Unified telegram bot
-├── web_app.py          # 🌐 Web interface
-├── requirements_clean.txt # 📋 Dependencies
-└── README.md           # 📚 Bu fayl
+├── deploy_bot.py      # Main bot code (production-ready)
+├── requirements.txt   # Python dependencies
+├── nixpacks.toml     # Build configuration
+├── Procfile          # Process definition
+├── railway.json      # Railway settings
+└── README.md         # This file
 ```
 
-## ⚙️ Sozlamalar
+## ⚙️ Environment Variables
 
-`config.py` faylida barcha sozlamalar:
-- Bot token
-- Fayl yo'llari
-- Timeout'lar
-- yt-dlp sozlamalari
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `BOT_TOKEN` | Telegram bot token from @BotFather | ✅ Yes |
 
-## 🎯 Rejimlar
+## 🎯 Bot Commands
 
-1. **Kichik hajm** - Tez (WebM ~10MB)
-2. **Muvozanatli** - Tavsiya etiladi (M4A ~25MB)
-3. **Yuqori sifat** - Eng yaxshi (M4A ~50MB)  
-4. **MP3 format** - Universal (FFmpeg kerak)
+- `/start` - Start the bot and see welcome message
+- `/help` - Show help information
+- Send YouTube URL - Download audio from video
 
-## 📊 Cheklovlar
+## 📊 Specifications
 
-- **Fayl hajmi:** Cheklovsiz (avtomatik bo'linadi)
-- **Video uzunligi:** Cheklovsiz
-- **Formatlar:** M4A, MP3, WebM, Opus
-- **Telegram limit:** 50MB (avtomatik chunks)
+- **Language:** Python 3.11
+- **Framework:** python-telegram-bot
+- **Deployment:** Railway (Nixpacks)
+- **Uptime:** 24/7
+- **File limit:** Unlimited (auto-splitting)
+- **Audio format:** M4A/WebM (best quality)
 
-## 🔧 Talablar
+## 🔧 Local Development
 
-- Python 3.7+
-- Internet aloqasi  
-- FFmpeg (MP3 konvertatsiya uchun, ixtiyoriy)
+```bash
+# Clone repository
+git clone https://github.com/DAMIR030303/mp3-downloader.git
+cd mp3-downloader
 
-## 📚 Hujjatlar
+# Install dependencies
+pip install -r requirements.txt
 
-- [Optimizatsiya Qo'llanmasi](OPTIMIZED_GUIDE.md)
-- [Katta Fayllar Support](LARGE_FILES_SUPPORT.md)
-- [Loyiha Hisoboti](FINAL_REPORT.md)
+# Set environment variable
+export BOT_TOKEN=your_bot_token_here
 
-## 🤝 Hissa Qo'shish
+# Run bot
+python deploy_bot.py
+```
 
-1. Fork qiling
-2. Feature branch yarating
-3. Commit qiling
-4. Pull request yuboring
+## 📄 License
 
-## 📄 Litsenziya
+MIT License - feel free to use for personal projects.
 
-MIT License - bepul foydalaning!
+## ⚠️ Disclaimer
 
-## ⚠️ Ogohlantirish
-
-Faqat shaxsiy foydalanish uchun. Mualliflik huquqlariga rioya qiling.
+For personal use only. Respect copyright laws and YouTube's terms of service.
 
 ---
 
-**🎵 Endi har qanday YouTube audio'ni osongina yuklab oling!**
+**🎵 Download any YouTube audio instantly and unlimited!**
 
-> Professional darajada, cheklovsiz, tez va ishonchli!
+> Professional, fast, reliable, and completely free!

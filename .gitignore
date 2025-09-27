@@ -9,7 +9,6 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
 eggs/
 .eggs/
 lib/
@@ -40,20 +39,10 @@ venv.bak/
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Project specific
+# Bot downloads (temporary)
 downloads/
-audio_downloads/
-test_downloads/
-webm_downloads/
-quick_test_downloads/
-telegram_downloads/
 *.mp3
 *.mp4
 *.webm
@@ -62,6 +51,5 @@ telegram_downloads/
 
 # Temporary files
 temp_*
-audio_*
 *.part*
 *.tmp
