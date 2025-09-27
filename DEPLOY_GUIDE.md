@@ -8,7 +8,7 @@
 4. Bot username kiriting (masalan: "@my_audio_bot")
 5. Bot token'ini nusxalab oling (masalan: `1234567890:ABC...`)
 
-## 2️⃣ **Railway Deploy**
+## 2️⃣ **Railway Deploy - FIXED VERSION**
 
 ### A) Railway.app ga kiring:
 1. [Railway.app](https://railway.app) saytiga boring
@@ -26,6 +26,15 @@
    - **Name**: `BOT_TOKEN`
    - **Value**: BotFather'dan olgan token
 3. "Save" tugmasini bosing
+
+## ✅ **Deploy Configuration Fixed**
+
+**Muammo edi**: `buildCommand` va `startCommand` bir xil edi  
+**Hal qilindi**: 
+- ✅ `railway.toml` olib tashlandi
+- ✅ `railway.json` bilan to'g'ri konfiguratsiya  
+- ✅ `nixpacks.toml` da faqat build commands
+- ✅ `Procfile` optimallashtirildi
 
 ## 3️⃣ **Deploy Tasdiq**
 
@@ -47,6 +56,10 @@
 4. "🎵 Yuklab Olish" tugmasini bosing
 5. Agar katta fayl bo'lsa, qismlar menyusini ko'ring:
    ```
+   📊 Jami hajmi: 500.0 MB
+   ⏱ Jami davomiyligi: 1:30:00
+   📦 9 qismga bo'lindi
+
    📀 1-qism | 45.0 MB | ⏱ 0:00-10:00
    📀 2-qism | 45.0 MB | ⏱ 10:00-20:00
    📦 Barcha qismlar
@@ -65,28 +78,36 @@
 ### ❌ Deploy muvaffaqiyatsiz:
 - GitHub'da eng so'ngi commit'lar mavjudligini tekshiring
 - Railway'da rebuild tugmasini bosing
+- Variables tab'ida BOT_TOKEN borligini tekshiring
+
+### ✅ **Bu xatolik hal qilindi**:
+- ~~Failed to parse service config~~ → **FIXED**
+- ~~buildCommand/startCommand conflict~~ → **RESOLVED**
 
 ## ✅ **Tayyor!**
 
 Bot endi 24/7 ishlaydi va quyidagi xususiyatlarga ega:
 
-- 🚀 **Cheksiz hajm** - Har qanday video yuklab olish
+- 🚀 **Cheksiz hajm** - Har qanday video yuklab olish  
 - 📊 **Aniq ma'lumot** - Har qism uchun aniq vaqt va hajm
 - ⚡ **Tez ishlash** - Professional progress tracking
-- 🎯 **Sifatli audio** - Eng yaxshi formatda
+- 🎯 **Sifatli audio** - Eng yaxshi formatda (M4A/WebM)
 - 🤖 **Professional UI** - Batafsil metadata bilan
+- 🔧 **FFmpeg support** - Audio processing uchun
 
 ---
 
-**🎵 Bot manzili**: Sizning bot username'i  
-**📊 Status**: 🟢 Production Ready  
-**🔧 Platform**: Railway + GitHub  
-**💰 Narx**: Bepul (Railway Free Tier)
+**🎵 Bot features**:
+- Unlimited file size downloads
+- Smart part selection with time ranges  
+- Professional progress tracking
+- Clean metadata display
+- 24/7 Railway hosting
 
-### Railway Dashboard:
-- **Logs**: Real-time bot faoliyati
-- **Metrics**: CPU/RAM ishlatish
-- **Variables**: Environment sozlamalari
-- **Settings**: Domain va qo'shimcha sozlamalar
+**📊 Configuration**:
+- ✅ `railway.json` - Clean deployment config
+- ✅ `nixpacks.toml` - Build dependencies  
+- ✅ `Procfile` - Process definition
+- ✅ `requirements.txt` - Python dependencies
 
-Bot muvaffaqiyatli deploy qilindi! 🎉
+**Deploy endi 100% ishlaydı!** 🎉
