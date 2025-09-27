@@ -16,6 +16,7 @@ from typing import Optional, Tuple, Callable
 import tempfile
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest, Forbidden
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, 
     filters, ContextTypes, CallbackQueryHandler
@@ -44,9 +45,77 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+REQUIRED_CHANNEL = os.getenv("REQUIRED_CHANNEL", "@LinkYukla_bot").strip()
+REQUIRED_CHANNEL_LINK = os.getenv("REQUIRED_CHANNEL_LINK", "")
+
+if REQUIRED_CHANNEL and not REQUIRED_CHANNEL_LINK:
+    if REQUIRED_CHANNEL.startswith("@"):
+        REQUIRED_CHANNEL_LINK = f"https://t.me/{REQUIRED_CHANNEL.lstrip('@')}"
+    elif REQUIRED_CHANNEL.startswith("https://t.me/"):
+        REQUIRED_CHANNEL_LINK = REQUIRED_CHANNEL
+
 # Create downloads directory
 downloads_dir = Path("downloads")
 downloads_dir.mkdir(exist_ok=True)
+
+async def _reply_with_text(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, reply_markup: Optional[InlineKeyboardMarkup] = None) -> None:
+    message = update.effective_message
+    if message:
+        await message.reply_text(text, reply_markup=reply_markup)
+    else:
+        chat = update.effective_chat
+        if chat:
+            await context.bot.send_message(chat_id=chat.id, text=text, reply_markup=reply_markup)
+
+async def _send_subscription_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not REQUIRED_CHANNEL:
+        return
+
+    prompt_text = (
+        f"🚫 Botdan foydalanish uchun avval {REQUIRED_CHANNEL} kanaliga obuna bo'ling.\n"
+        "✅ Obuna bo'lgach, /start buyrug'ini qayta yuboring."
+    )
+    reply_markup = None
+    if REQUIRED_CHANNEL_LINK:
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Kanalga o'tish", url=REQUIRED_CHANNEL_LINK)]])
+    await _reply_with_text(update, context, prompt_text, reply_markup=reply_markup)
+
+async def _send_subscription_error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    error_text = (
+        "⚠️ Obuna holatini tekshirishda xatolik yuz berdi. "
+        "Bot administratori kanal va bot ruxsatlarini tekshirib, keyinroq yana urinib ko'ring."
+    )
+    await _reply_with_text(update, context, error_text)
+
+async def ensure_user_subscribed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    if not REQUIRED_CHANNEL:
+        return True
+
+    user = update.effective_user
+    if not user:
+        return True
+
+    try:
+        member = await context.bot.get_chat_member(REQUIRED_CHANNEL, user.id)
+    except (BadRequest, Forbidden) as exc:
+        logger.warning("Subscription check failed for user %s: %s", user.id, exc)
+        await _send_subscription_error(update, context)
+        if update.callback_query:
+            await update.callback_query.answer("Obuna tekshiruvida xatolik yuz berdi.", show_alert=True)
+        return False
+
+    status = getattr(member, "status", None)
+    is_member = status not in ("left", "kicked")
+    if status == "restricted" and hasattr(member, "is_member"):
+        is_member = member.is_member
+
+    if not is_member:
+        await _send_subscription_prompt(update, context)
+        if update.callback_query:
+            await update.callback_query.answer("Avval kanalga obuna bo'ling.", show_alert=True)
+        return False
+
+    return True
 
 def sanitize_filename(filename: str) -> str:
     """Clean filename for cross-platform compatibility"""
@@ -406,6 +475,8 @@ downloader = AudioDownloader()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start command handler with developer info"""
+    if not await ensure_user_subscribed(update, context):
+        return
     welcome_text = """🎵 Unlimited Audio Bot
 
 ✨ Xususiyatlar:
@@ -427,6 +498,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Help command handler"""
+    if not await ensure_user_subscribed(update, context):
+        return
     help_text = """
 🆘 **Yordam - @unlimited_audio_bot**
 
@@ -459,6 +532,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle YouTube URL"""
+    if not await ensure_user_subscribed(update, context):
+        return
     url = update.message.text.strip()
     
     if not ('youtube.com' in url or 'youtu.be' in url):
@@ -543,6 +618,8 @@ Format tanlang:"""
 
 async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle format selection"""
+    if not await ensure_user_subscribed(update, context):
+        return
     query = update.callback_query
     await query.answer()
     
@@ -656,6 +733,8 @@ Qaysi qismni tanlaysiz?"""
 
 async def part_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle part selection"""
+    if not await ensure_user_subscribed(update, context):
+        return
     query = update.callback_query
     await query.answer()
     
