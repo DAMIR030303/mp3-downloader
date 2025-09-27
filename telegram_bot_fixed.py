@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-MP3 Downloader Telegram Bot - YouTube'dan audio yuklab olish
+MP3 Downloader Telegram Bot - Yangilangan versiya (fayl topish muammosi hal qilindi)
 """
 
 import os
 import tempfile
 import logging
 import re
+import shutil
 from pathlib import Path
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
@@ -19,13 +20,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Bot tokeni (keyinroq .env faylga o'tkazamiz)
+# Bot tokeni
 BOT_TOKEN = "8379762562:AAGwwMRueY17BAmo-HJgLU2zKTTsESswKLs"
 
 def sanitize_filename(filename):
     """Windows uchun fayl nomini tozalash"""
     # Noto'g'ri belgilarni olib tashlash
-    filename = re.sub(r'[<>:"/\\|?*]', '', filename)
+    filename = re.sub(r'[<>:"/\\|?*⧸]', '', filename)
     # Ko'p bo'shliqlarni bitta qilish
     filename = re.sub(r'\s+', ' ', filename)
     # Oxirgi nuqta va bo'shliqlarni olib tashlash
@@ -34,10 +35,14 @@ def sanitize_filename(filename):
 
 class TelegramAudioDownloader:
     def __init__(self):
+        # Downloads papkasini yaratish
+        self.downloads_dir = Path("telegram_downloads")
+        self.downloads_dir.mkdir(exist_ok=True)
+        
         self.ydl_opts = {
             'format': 'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio',
-            'outtmpl': 'downloads/%(title).100s.%(ext)s',  # Fayl nomini cheklash
-            'restrictfilenames': True,  # Xavfsiz fayl nomlari
+            'restrictfilenames': False,  # Unicode lar uchun
+            'windowsfilenames': True,    # Windows uchun xavfsiz
         }
     
     def get_video_info(self, url):
@@ -46,7 +51,7 @@ class TelegramAudioDownloader:
             with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
                 info = ydl.extract_info(url, download=False)
                 return {
-                    'title': info.get('title', 'Unknown')[:100],  # Telegram uchun cheklash
+                    'title': info.get('title', 'Unknown')[:100],
                     'duration': info.get('duration', 0),
                     'thumbnail': info.get('thumbnail', ''),
                     'uploader': info.get('uploader', 'Unknown'),
@@ -56,41 +61,50 @@ class TelegramAudioDownloader:
         except Exception as e:
             return {'error': str(e)}
     
-    def download_audio(self, url, temp_dir):
-        """Audio yuklab olish"""
+    def download_audio(self, url):
+        """Audio yuklab olish - yangilangan versiya"""
         try:
+            # Vaqtinchalik fayl nomi
+            import uuid
+            temp_id = str(uuid.uuid4())[:8]
+            
             opts = self.ydl_opts.copy()
-            opts['outtmpl'] = os.path.join(temp_dir, '%(title)s.%(ext)s')
+            opts['outtmpl'] = str(self.downloads_dir / f'audio_{temp_id}.%(ext)s')
             
             with yt_dlp.YoutubeDL(opts) as ydl:
+                logger.info(f"Yuklab olish boshlandi: {url}")
                 info = ydl.extract_info(url, download=True)
-                title = info.get('title', 'Unknown')
+                title = sanitize_filename(info.get('title', 'Unknown'))
                 
-                # Temp papkadagi barcha fayllarni tekshirish
-                print(f"Temp papka: {temp_dir}")
-                for file in os.listdir(temp_dir):
-                    print(f"Topilgan fayl: {file}")
-                    file_path = os.path.join(temp_dir, file)
-                    if file.endswith(('.m4a', '.mp3', '.webm', '.opus')):
-                        print(f"Audio fayl topildi: {file_path}")
-                        return file_path, title
+                # Yuklab olingan faylni topish
+                for file_path in self.downloads_dir.glob(f'audio_{temp_id}.*'):
+                    if file_path.suffix in ['.m4a', '.mp3', '.webm', '.opus']:
+                        # Fayl nomini to'g'ri qilib o'zgartirish
+                        new_name = f"{title}{file_path.suffix}"
+                        new_path = self.downloads_dir / new_name
+                        
+                        # Agar bir xil nomli fayl bo'lsa, raqam qo'shamiz
+                        counter = 1
+                        while new_path.exists():
+                            new_name = f"{title}_{counter}{file_path.suffix}"
+                            new_path = self.downloads_dir / new_name
+                            counter += 1
+                        
+                        # Faylni ko'chirish
+                        shutil.move(str(file_path), str(new_path))
+                        logger.info(f"Fayl saqlandi: {new_path}")
+                        
+                        return str(new_path), title
                 
-                # Agar yuklab olingan fayl nomini aniq bilsak
-                downloaded_file = ydl.prepare_filename(info)
-                print(f"Kutilayotgan fayl: {downloaded_file}")
-                if os.path.exists(downloaded_file):
-                    return downloaded_file, title
+                # Agar fayl topilmasa, papkani tekshiramiz
+                files = list(self.downloads_dir.glob(f'audio_{temp_id}.*'))
+                if files:
+                    return str(files[0]), title
                 
-                # Extension'siz ham tekshiramiz
-                base_name = os.path.splitext(downloaded_file)[0]
-                for ext in ['.m4a', '.mp3', '.webm', '.opus']:
-                    test_file = base_name + ext
-                    if os.path.exists(test_file):
-                        return test_file, title
-                
-                return None, f"Fayl topilmadi. Temp papkada: {os.listdir(temp_dir)}"
+                return None, "Fayl yuklab olinmadi"
                 
         except Exception as e:
+            logger.error(f"Yuklab olishda xatolik: {e}")
             return None, str(e)
 
 downloader = TelegramAudioDownloader()
@@ -132,14 +146,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 **Misollar:**
 • https://youtube.com/watch?v=abc123
 • https://youtu.be/abc123
-• https://youtube.com/playlist?list=...
 
 **Cheklovlar:**
 • Maksimal fayl hajmi: 50MB
 • Maksimal davomiyligi: 10 daqiqa
 
 **Muammolar bo'lsa:**
-@your_support_username ga murojaat qiling
+@support ga murojaat qiling
     """
     
     await update.message.reply_text(help_text, parse_mode='Markdown')
@@ -199,35 +212,42 @@ async def download_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Yuklab olish jarayonini boshlash
     await query.edit_message_text("⏳ Audio yuklab olinmoqda, iltimos kuting...")
     
-    # Vaqtinchalik papka yaratish
-    with tempfile.TemporaryDirectory() as temp_dir:
-        file_path, result = downloader.download_audio(url, temp_dir)
+    # Audio yuklab olish
+    file_path, result = downloader.download_audio(url)
+    
+    if file_path and os.path.exists(file_path):
+        # Fayl hajmini tekshirish (Telegram 50MB cheklovi)
+        file_size = os.path.getsize(file_path)
+        if file_size > 50 * 1024 * 1024:  # 50MB
+            await query.edit_message_text("❌ Fayl hajmi juda katta (>50MB). Qisqaroq video tanlang.")
+            # Faylni o'chirish
+            os.remove(file_path)
+            return
         
-        if file_path and os.path.exists(file_path):
-            # Fayl hajmini tekshirish (Telegram 50MB cheklovi)
-            file_size = os.path.getsize(file_path)
-            if file_size > 50 * 1024 * 1024:  # 50MB
-                await query.edit_message_text("❌ Fayl hajmi juda katta (>50MB). Qisqaroq video tanlang.")
-                return
+        try:
+            # Audio faylni yuborish
+            await query.edit_message_text("📤 Fayl yuborilmoqda...")
             
-            try:
-                # Audio faylni yuborish
-                await query.edit_message_text("📤 Fayl yuborilmoqda...")
-                
-                with open(file_path, 'rb') as audio_file:
-                    await context.bot.send_audio(
-                        chat_id=query.message.chat_id,
-                        audio=audio_file,
-                        title=result,
-                        caption=f"🎵 {result}\n\n✅ @mp3_downloader_bot orqali yuklab olindi"
-                    )
-                
-                await query.edit_message_text("✅ Audio muvaffaqiyatli yuborildi!")
-                
-            except Exception as e:
-                await query.edit_message_text(f"❌ Faylni yuborishda xatolik: {str(e)}")
-        else:
-            await query.edit_message_text(f"❌ Yuklab olishda xatolik: {result}")
+            with open(file_path, 'rb') as audio_file:
+                await context.bot.send_audio(
+                    chat_id=query.message.chat_id,
+                    audio=audio_file,
+                    title=result,
+                    caption=f"🎵 {result}\n\n✅ @mp3_downloader_bot orqali yuklab olindi"
+                )
+            
+            await query.edit_message_text("✅ Audio muvaffaqiyatli yuborildi!")
+            
+            # Faylni o'chirish (joy tejash uchun)
+            os.remove(file_path)
+            
+        except Exception as e:
+            await query.edit_message_text(f"❌ Faylni yuborishda xatolik: {str(e)}")
+            # Xatolik bo'lsa ham faylni o'chirish
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    else:
+        await query.edit_message_text(f"❌ Yuklab olishda xatolik: {result}")
 
 async def handle_other_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Boshqa xabarlarni qayta ishlash"""
@@ -238,15 +258,9 @@ async def handle_other_messages(update: Update, context: ContextTypes.DEFAULT_TY
         "• https://youtu.be/abc123"
     )
 
-async def main():
+def main():
     """Botni ishga tushirish"""
-    if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
-        print("Bot tokenini o'rnating!")
-        print("1. @BotFather'dan bot yarating")
-        print("2. Token olgan tokenni BOT_TOKEN o'zgaruvchisiga qo'ying")
-        return
-    
-    # Bot ilovasini yaratish va ishga tushirish
+    # Bot ilovasini yaratish
     application = Application.builder().token(BOT_TOKEN).build()
     
     # Handler'larni qo'shish
@@ -256,31 +270,9 @@ async def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_url))
     
     # Botni ishga tushirish
-    print("Bot MP3 Downloader ishga tushdi!")
-    print("Telegram'da /start buyrug'ini yuboring")
-    
-    # Botni to'g'ri ishga tushirish
-    async with application:
-        await application.initialize()
-        await application.start()
-        await application.updater.start_polling()
-        
-        # Bot ishlab turishi uchun kutish
-        try:
-            # Bot ishlab turishi uchun kutish
-            import asyncio
-            
-            # Bot ishlab turishi uchun kutish
-            while True:
-                await asyncio.sleep(1)
-            
-        except KeyboardInterrupt:
-            print("\nBot to'xtatildi!")
-        finally:
-            await application.updater.stop()
-            await application.stop()
-            await application.shutdown()
+    print("🤖 MP3 Downloader Bot (Fixed) ishga tushdi!")
+    print("📱 Telegram'da /start buyrug'ini yuboring")
+    application.run_polling()
 
 if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+    main()
