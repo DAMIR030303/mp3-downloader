@@ -249,16 +249,25 @@ class AudioDownloader:
         temp_file = None
         
         # Format configurations
-        format_configs = {
-            'mp3': {
+        ffmpeg_available = bool(shutil.which('ffmpeg'))
+
+        def mp3_config(kbps: str):
+            cfg = {
                 'format': 'bestaudio[ext=m4a]/bestaudio',
-                'postprocessors': [{
+                'extension': 'mp3' if ffmpeg_available else 'm4a'
+            }
+            if ffmpeg_available:
+                cfg['postprocessors'] = [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }] if shutil.which('ffmpeg') else [],
-                'extension': 'mp3' if shutil.which('ffmpeg') else 'm4a'
-            },
+                    'preferredquality': kbps,
+                }]
+            return cfg
+
+        format_configs = {
+            'mp3_128': mp3_config('128'),
+            'mp3_192': mp3_config('192'),
+            'mp3_320': mp3_config('320'),
             'm4a': {
                 'format': 'bestaudio[ext=m4a]/bestaudio',
                 'extension': 'm4a'
@@ -266,21 +275,9 @@ class AudioDownloader:
             'best_audio': {
                 'format': 'bestaudio/best',
                 'extension': 'auto'
-            },
-            'mp4_1080': {
-                'format': 'best[height<=1080][ext=mp4]/best[height<=1080]/best[ext=mp4]/best',
-                'extension': 'mp4'
-            },
-            'mp4_720': {
-                'format': 'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best',
-                'extension': 'mp4'
-            },
-            'mp4_480': {
-                'format': 'best[height<=480][ext=mp4]/best[height<=480]/best[ext=mp4]/best',
-                'extension': 'mp4'
             }
         }
-        
+
         format_config = format_configs.get(format_type, format_configs['best_audio'])
         
         # Try different download methods with format-specific config
@@ -405,14 +402,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = """🎵 Unlimited Audio Bot
 
 ✨ Xususiyatlar:
-🎯 Har qanday hajmdagi video yuklab olish
-🎼 MP3, M4A, MP4 formatlar (1080p, 720p, 480p)
+🎯 Har qanday hajmdagi audio yuklab olish
+🎼 MP3 formatlar (128kbps, 192kbps, 320kbps)
+🎼 Original M4A va eng yaxshi sifat
 📊 Katta fayllar uchun qism tanlash
 ⚡ 24/7 ishlaydigan xizmat
 
 🔥 Qanday ishlaydi:
 1️⃣ YouTube URL yuboring
-2️⃣ Format tanlang
+2️⃣ Audio formatni tanlang
 3️⃣ Yuklab oling!
 
 👨‍💻 Muallif: N.Damir - Senior Dasturchi
@@ -428,28 +426,33 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 **Foydalanish:**
 1. YouTube URL yuboring
-2. "🎵 Yuklab olish" tugmasini bosing
-3. Agar fayl katta bo'lsa:
-   - Qismlar menyusi ko'rinadi
+2. "🎵 Yuklab olish" tugmasidan formatni tanlang
+3. Katta fayl bo'lsa:
+   - Qismlar menyusi chiqadi
    - Kerakli qismni tanlang
-   - Yoki "📦 Barchasi" ni bosing
+   - Yoki "🎵 Barchasi"ni bosing
 
 **Qism tanlash misoli:**
 ```
-🎵 1-soatlik podcast (500MB)
-📦 9 qismga bo'lindi
+🎙️ 1-soatlik podcast (500MB)
+🎚️ 9 qismga bo'linadi
 
-📀 1-qism (45MB) ~1-10 daq
-📀 2-qism (45MB) ~11-20 daq  
-📀 3-qism (45MB) ~21-30 daq
+🎙️ 1-qism (45MB) ~1-10 daq
+🎙️ 2-qism (45MB) ~11-20 daq
+🎙️ 3-qism (45MB) ~21-30 daq
 ...
-📦 Barchasi
+🎵 Barchasi
 ```
+
+**Formatlar:**
+• MP3 128kbps, 192kbps, 320kbps
+• M4A original sifat
+• Eng yaxshi mavjud audio
 
 **Cheklovlar:**
 • Maksimal: Cheklovsiz
 • Timeout: 10 daqiqa
-• Format: M4A/WebM (best quality)
+• Katta fayllar avtomatik bo'linadi
     """
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
@@ -461,7 +464,7 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ YouTube havolasini yuboring!")
         return
     
-    status_msg = await update.message.reply_text("🔍 Video tekshirilmoqda...")
+    status_msg = await update.message.reply_text("🔍 Havola tekshirilmoqda...")
     
     info = downloader.get_video_info(url)
     
@@ -513,16 +516,15 @@ Format tanlang:"""
     # Format selection keyboard with short callback data
     keyboard = [
         [
-            InlineKeyboardButton("🎵 MP3 Audio", callback_data=f"fmt:mp3:{user_id}"),
-            InlineKeyboardButton("🎶 M4A Audio", callback_data=f"fmt:m4a:{user_id}")
+            InlineKeyboardButton("🎵 MP3 128 kbps", callback_data=f"fmt:mp3_128:{user_id}"),
+            InlineKeyboardButton("🎶 MP3 192 kbps", callback_data=f"fmt:mp3_192:{user_id}")
         ],
         [
-            InlineKeyboardButton("🎬 MP4 Video (1080p)", callback_data=f"fmt:mp4_1080:{user_id}"),
-            InlineKeyboardButton("📹 MP4 Video (720p)", callback_data=f"fmt:mp4_720:{user_id}")
+            InlineKeyboardButton("🎧 MP3 320 kbps", callback_data=f"fmt:mp3_320:{user_id}"),
+            InlineKeyboardButton("🎼 M4A (Original)", callback_data=f"fmt:m4a:{user_id}")
         ],
         [
-            InlineKeyboardButton("📺 MP4 Video (480p)", callback_data=f"fmt:mp4_480:{user_id}"),
-            InlineKeyboardButton("🎧 Best Audio Quality", callback_data=f"fmt:best_audio:{user_id}")
+            InlineKeyboardButton("💎 Eng yaxshi audio", callback_data=f"fmt:best_audio:{user_id}")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -558,12 +560,11 @@ async def format_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Format display names
     format_names = {
-        'mp3': '🎵 MP3 Audio',
-        'm4a': '🎶 M4A Audio',
-        'best_audio': '🎧 Best Audio Quality',
-        'mp4_1080': '🎬 MP4 Video (1080p)',
-        'mp4_720': '📹 MP4 Video (720p)',
-        'mp4_480': '📺 MP4 Video (480p)'
+        'mp3_128': '🎵 MP3 128 kbps',
+        'mp3_192': '🎶 MP3 192 kbps',
+        'mp3_320': '🎧 MP3 320 kbps',
+        'm4a': '🎼 M4A (Original)',
+        'best_audio': '💎 Eng yaxshi audio'
     }
     
     format_name = format_names.get(format_type, format_type.upper())
@@ -620,28 +621,33 @@ Qaysi qismni tanlaysiz?"""
             
         else:
             await progress_msg.edit_text(f"📊 Tayyor: {format_file_size(file_size)}\n📤 Yuborilmoqda...")
-            
-            # Send as audio or video based on format
-            if format_type in ['mp3', 'm4a', 'best_audio']:
-                with open(file_path, 'rb') as media_file:
+
+            caption = f"🎵 {title[:50]}\n🎧 {format_name}\n📦 {format_file_size(file_size)}\n⏱ {format_duration(duration)}"
+            suffix = Path(file_path).suffix.lower()
+            audio_suffixes = {'.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus'}
+
+            with open(file_path, 'rb') as media_file:
+                if suffix in audio_suffixes:
                     await context.bot.send_audio(
                         chat_id=query.message.chat_id,
                         audio=media_file,
                         title=title,
-                        caption=f"🎵 {title[:50]}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
+                        caption=caption,
+                        duration=duration if duration else None,
                         read_timeout=UPLOAD_TIMEOUT,
                         write_timeout=UPLOAD_TIMEOUT
                     )
-            else:  # Video formats
-                with open(file_path, 'rb') as media_file:
-                    await context.bot.send_video(
+                else:
+                    filename = f"{title}{suffix or '.audio'}"
+                    await context.bot.send_document(
                         chat_id=query.message.chat_id,
-                        video=media_file,
-                        caption=f"📹 {title[:50]}\n📁 {format_name}\n📊 {format_file_size(file_size)}\n⏱ {format_duration(duration)}",
+                        document=media_file,
+                        filename=filename,
+                        caption=caption,
                         read_timeout=UPLOAD_TIMEOUT,
                         write_timeout=UPLOAD_TIMEOUT
                     )
-            
+
             await progress_msg.edit_text(f"✅ {format_name} yuborildi!")
             os.remove(file_path)
         
